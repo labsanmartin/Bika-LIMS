@@ -2,7 +2,6 @@ from bika.lims import bikaMessageFactory as _
 from bika.lims.utils import t
 from bika.lims import PMF
 from bika.lims.browser.bika_listing import WorkflowAction
-from bika.lims.browser.publish import doPublish
 from bika.lims.idserver import renameAfterCreation
 from bika.lims.permissions import *
 from bika.lims.utils import changeWorkflowState
@@ -200,54 +199,6 @@ class AnalysisRequestWorkflowAction(WorkflowAction):
                                self.context.absolute_url())
         self.request.response.redirect(self.destination_url)
 
-    def workflow_action_sample(self):
-        form = self.request.form
-        workflow = getToolByName(self.context, 'portal_workflow')
-        action, came_from = WorkflowAction._get_form_workflow_action(self)
-        checkPermission = self.context.portal_membership.checkPermission
-        # This action happens only for a single context.
-        # Context can be a sample or an AR.
-        #
-        # Once the Sampler/DateSampled values are completed on the
-        # Sample or AR form, the user has two choices.
-        #
-        # 1) Use the normal Plone UI actions dropdown, (invokes this code).
-        # 2) Click the save button, which invokes code in SampleEdit or
-        #    AnalysisRequestEdit __call__ methods.
-        #
-        # Both these methods do pretty much the same thing, but now, it's
-        # done in three places.
-        if self.context.portal_type == "AnalysisRequest":
-            sample = self.context.getSample()
-        else:
-            sample = self.context
-        # can't transition inactive items
-        if workflow.getInfoFor(sample, 'inactive_state', '') == 'inactive' \
-           or not checkPermission(SampleSample, sample):
-            message = _('No changes made.')
-            self.context.plone_utils.addPortalMessage(message, 'info')
-            self.destination_url = self.request.get_header("referer",
-                                   self.context.absolute_url())
-            self.request.response.redirect(self.destination_url)
-            return
-        # grab this object's Sampler and DateSampled from the form
-        Sampler = form['getSampler'][0][sample_uid].strip()
-        Sampler = Sampler and Sampler or ''
-        DateSampled = form['getDateSampled'][0][obj_uid].strip()
-        DateSampled = DateSampled and DateTime(DateSampled) or ''
-        # write them to the sample
-        sample.setSampler(Sampler)
-        sample.setDateSampled(DateSampled)
-        # transition the object if both values are present
-        if Sampler and DateSampled:
-            workflow.doActionFor(sample, action)
-            sample.reindexObject()
-            message = "Changes saved."
-            self.context.plone_utils.addPortalMessage(message, 'info')
-        self.destination_url = self.request.get_header("referer",
-                               self.context.absolute_url())
-        self.request.response.redirect(self.destination_url)
-
     def workflow_action_receive(self):
         # default bika_listing.py/WorkflowAction, but then
         # print automatic labels.
@@ -410,22 +361,8 @@ class AnalysisRequestWorkflowAction(WorkflowAction):
             self.context.plone_utils.addPortalMessage(message, 'info')
             self.request.response.redirect(self.context.absolute_url())
             return
-        # publish entire AR.
-        self.context.setDatePublished(DateTime())
-        transitioned = self.doPublish(self.context,
-                               self.request,
-                               action,
-                               [self.context, ])()
-        if len(transitioned) == 1:
-            message = _(
-                '${items} published.',
-                mapping={'items': safe_unicode(', '.join(transitioned))})
-        else:
-            message = _("No items were published")
-        self.context.plone_utils.addPortalMessage(message, 'info')
-        self.destination_url = self.request.get_header("referer",
-                               self.context.absolute_url())
-        self.request.response.redirect(self.destination_url)
+        # AR publish preview
+        self.request.response.redirect(self.context.absolute_url() + "/publish")
 
     def workflow_action_verify(self):
         # default bika_listing.py/WorkflowAction, but then go to view screen.
@@ -460,8 +397,8 @@ class AnalysisRequestWorkflowAction(WorkflowAction):
         laboratory = self.context.bika_setup.laboratory
         lab_address = "<br/>".join(laboratory.getPrintAddress())
         mime_msg = MIMEMultipart('related')
-        mime_msg['Subject'] = _("Erroneus result publication from %s") % \
-                                ar.getRequestID()
+        mime_msg['Subject'] = t(_("Erroneus result publication from ${request_id}",
+                                mapping={"request_id": ar.getRequestID()}))
         mime_msg['From'] = formataddr(
             (encode_header(laboratory.getName()),
              laboratory.getEmailAddress()))
@@ -500,12 +437,15 @@ class AnalysisRequestWorkflowAction(WorkflowAction):
                     or ''
 
         body = _("Some errors have been detected in the results report "
-                 "published from the Analysis Request %s. The Analysis "
-                 "Request %s has been created automatically and the "
+                 "published from the Analysis Request ${request_link}. The Analysis "
+                 "Request ${new_request_link} has been created automatically and the "
                  "previous has been invalidated.<br/>The possible mistake "
                  "has been picked up and is under investigation.<br/><br/>"
-                 "%s%s"
-                 ) % (aranchor, naranchor, addremarks, lab_address)
+                 "${remarks}${lab_address}",
+                 mapping={"request_link":aranchor,
+                          "new_request_link":naranchor,
+                          "remarks": addremarks,
+                          "lab_address": lab_address})
         msg_txt = MIMEText(safe_unicode(body).encode('utf-8'),
                            _subtype='html')
         mime_msg.preamble = 'This is a multi-part MIME message.'
@@ -536,13 +476,10 @@ class AnalysisRequestWorkflowAction(WorkflowAction):
             return
         url = self.context.absolute_url() + "/portal_factory/" + \
             "AnalysisRequest/Request new analyses/ar_add" + \
-            "?col_count={0}".format(len(objects)) + \
+            "?ar_count={0}".format(len(objects)) + \
             "&copy_from={0}".format(",".join(objects.keys()))
         self.request.response.redirect(url)
         return
-
-    def doPublish(self, context, request, action, analysis_requests):
-        return doPublish(context, request, action, analysis_requests)
 
     def cloneAR(self, ar):
         newar = _createObjectByType("AnalysisRequest", ar.aq_parent, tmpID())

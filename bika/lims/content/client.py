@@ -91,6 +91,24 @@ schema = Organisation.schema.copy() + atapi.Schema((
             format='select',
         )
     ),
+    atapi.BooleanField('DefaultDecimalMark',
+        schemata = "Preferences",
+        default = True,
+        widget = atapi.BooleanWidget(
+            label = _("Default decimal mark"),
+            description = _("The decimal mark selected in Bika Setup will be used."),
+        )
+    ),
+    atapi.StringField('DecimalMark',
+        schemata = "Preferences",
+        vocabulary=DECIMAL_MARKS,
+        default = ".",
+        widget = atapi.SelectionWidget(
+            label = _("Custom decimal mark"),
+            description = _("Decimal mark to use in the reports from this Client."),
+            format = 'select',
+        )
+    ),
 ))
 
 schema['AccountNumber'].write_permission = ManageClients
@@ -161,6 +179,17 @@ class Client(Organisation):
         else:
             contacts = self.objectValues('Contact')
         return contacts;
+
+    def getDecimalMark(self):
+        """ Return the decimal mark to be used on reports for this
+            client. If the client has DefaultDecimalMark selected, the
+            Default value from Bika Setup will be returned. Otherwise,
+            will return the value of DecimalMark.
+        """
+        if self.getDefaultDecimalMark() == False:
+            return self.Schema()['DecimalMark'].get(self)
+        return self.bika_setup.getDecimalMark()
+
 
 schemata.finalizeATCTSchema(schema, folderish = True, moveDiscussion = False)
 

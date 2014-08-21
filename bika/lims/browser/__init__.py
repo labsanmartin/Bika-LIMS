@@ -5,8 +5,10 @@ from AccessControl import ClassSecurityInfo
 from Products.CMFPlone.i18nl10n import ulocalized_time
 from Products.Five.browser import BrowserView
 from bika.lims import logger
-from zope.i18n import translate
 from zope.cachedescriptors.property import Lazy as lazy_property
+from zope.i18n import translate
+import plone, json
+
 
 class BrowserView(BrowserView):
 
@@ -99,7 +101,7 @@ class BrowserView(BrowserView):
         if time_only:
             msgid = 'time_format'
         # get the formatstring
-        formatstring = translate(msgid, 'bika', {}, self.request)
+        formatstring = translate(msgid, domain='bika', mapping={}, context=self.request)
         if formatstring is None or formatstring.startswith('date_') or formatstring.startswith('time_'):
             self.logger.error("bika/%s/%s could not be translated" %
                               (self.request.get('LANGUAGE'), msgid))
@@ -136,3 +138,21 @@ class BrowserView(BrowserView):
         if fmt == "time_format":
             fmt = "%I:%M %p"
         return fmt
+
+
+class ajaxGetProductVersion(BrowserView):
+    def __call__(self):
+        plone.protect.CheckAuthenticator(self.request)
+        vers = {}
+        if self.context.bika_setup.getShowNewReleasesInfo() == True:
+            pl = self.context
+            qi = pl.get('portal_quickinstaller')
+            for key in qi.keys():
+                vers[key] = qi.getProductVersion(key);
+        return json.dumps(vers)
+
+
+class ajaxHideNewReleasesInfo(BrowserView):
+    def __call__(self):
+        plone.protect.CheckAuthenticator(self.request)
+        return self.context.bika_setup.setShowNewReleasesInfo(False);

@@ -836,7 +836,11 @@ div.alert {
     margin: 10px 0;
     padding: 10px;
 }
+
 /* ARImport */
+.icons-on .section-arimports .contenttype-folder{
+    background: no-repeat transparent url(&dtml-portal_url;/++resource++bika.lims.images/folder.png);
+}
 table.arimport {
   border-top: 1px solid #dddddd;
 }
@@ -1018,12 +1022,10 @@ h2 a.add-button {
     margin-bottom: 8px;
     margin-top: 15px;
 }
-
 a.pdf {
     padding-left:20px;
     background: url(&dtml-portal_url;/++resource++bika.lims.images/pdf.png) no-repeat left center transparent;
 }
-
 a.add-remark {
     padding-right: 5px;
 }
@@ -1040,6 +1042,58 @@ a.print-16 {
 }
 a.print-16:hover {
     color: #3c3c3c !important;
+}
+/*To read combogrd items better*/
+div.cg-comboItem.cg-menu-item > div.cg-colItem.ui-corner-all > div.cg-DivItem {
+    height: 70px;
+}
+/*To down the live-search-bar*/
+div.LSResult {
+    position: relative;
+    top:75%;
+}
+
+table#add_analyses {
+    font-size: 120%;
+    line-height: 1.5em;
+}
+
+#bika-spinner {
+    display:none;
+    background-color: #fff;
+    background-image: url(&dtml-portal_url;/spinner.gif) center center no-repeat;
+    position: fixed;
+    width: 45px;
+    height: 45px;
+    top: 50%;
+    left: 50%;
+    margin-left: -22px; /* -1 * image width / 2 */
+    margin-top: -22px;  /* -1 * image height / 2 */
+    border:1px solid #eee;
+    border-radius:5px;
+    display: block;
+}
+
+#bika-spinner img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin-left: -8px;
+    margin-top: -8px;
+}
+
+#portal-alert input,
+#portal-alert a.button {
+    background-color: #436976 !important;
+    border: 0 none !important;
+    border-radius: 3px 3px 3px 3px !important;
+    color: #FFFFFF !important;
+    margin-top: 10px;
+    padding: 3px 10px;
+}
+
+#portal-alert a.button {
+    padding: 4px 10px;
 }
 
 </dtml-with>

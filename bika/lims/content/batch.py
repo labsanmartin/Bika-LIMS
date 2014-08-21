@@ -101,9 +101,28 @@ schema = BikaFolderSchema.copy() + Schema((
             label=_('Date'),
         ),
     ),
+    FloatField(
+        'ContainerTemperature',
+        default_content_type='text/x-web-intelligent',
+        default_output_type="text/plain",
+        widget=DecimalWidget(
+            label=_('Container Temperature'),
+            description = _("The temperature of the sample container on arrival"),
+        )
+    ),
+    StringField(
+        'ContainerCondition',
+        default_content_type='text/x-web-intelligent',
+        default_output_type="text/plain",
+        widget=StringWidget(
+            label=_('Container Condition'),
+            description = _("The physical condition of the sample container on arrival"),
+        )
+    ),
     LinesField(
         'BatchLabels',
         vocabulary="BatchLabelVocabulary",
+        accessor="getLabelNames",
         widget=MultiSelectionWidget(
             label=_("Batch labels"),
             format="checkbox",
@@ -192,10 +211,10 @@ schema['title'].widget.description = _("If no Title value is entered, the Batch 
 schema['description'].required = False
 schema['description'].widget.visible = True
 
-schema.moveField('Client', before='description')
 schema.moveField('ClientBatchID', before='description')
 schema.moveField('BatchID', before='description')
 schema.moveField('title', before='description')
+schema.moveField('Client', after='title')
 
 
 class Batch(ATFolder):
@@ -305,6 +324,12 @@ class Batch(ATFolder):
         canstatus = getCurrentState(self, StateFlow.cancellation)
         return revstatus == BatchState.open \
             and canstatus == CancellationState.active
+
+    def getLabelNames(self):
+        uc = getToolByName(self, 'uid_catalog')
+        uids = [uid for uid in self.Schema().getField('BatchLabels').get(self)]
+        labels = [label.getObject().title for label in uc(UID=uids)]
+        return labels
 
     def workflow_guard_open(self):
         """ Permitted if current review_state is 'closed' or 'cancelled'

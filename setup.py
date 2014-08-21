@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-version = '3.1'
+version = '3.1.4.1'
 
 setup(name='bika.lims',
       version=version,
@@ -11,6 +11,11 @@ setup(name='bika.lims',
       classifiers=[
       "Framework :: Plone",
       "Programming Language :: Python",
+      "Development Status :: 5 - Production/Stable",
+      "Environment :: Web Environment",
+      "Intended Audience :: Information Technology",
+      "Intended Audience :: Science/Research",
+      "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
       ],
       keywords='Bika Open Source LIMS',
       author='Bika Laboratory Systems',
@@ -45,9 +50,10 @@ setup(name='bika.lims',
           'test': [
               'plone.app.testing',
               'robotsuite',
+              'robotframework',
               'robotframework-selenium2library',
               'plone.app.robotframework',
-              'robotframework-debuglibrary',
+              'Products.PloneTestCase',
           ]
       },
       entry_points="""

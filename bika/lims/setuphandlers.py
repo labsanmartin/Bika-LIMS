@@ -189,7 +189,7 @@ class BikaGenerator:
 
         mp(AddAnalysis, ['Manager', 'Owner', 'LabManager', 'LabClerk', 'Sampler'], 1)
         mp(AddAnalysisProfile, ['Manager', 'Owner', 'LabManager', 'LabClerk'], 1)
-        mp(AddAnalysisRequest, ['Manager', 'Owner', 'LabManager', 'LabClerk', 'Sampler'], 1)
+        mp(AddAnalysisRequest, ['Manager', 'Owner', 'LabManager', 'LabClerk'], 1)
         mp(AddAnalysisSpec, ['Manager', 'Owner', 'LabManager', 'LabClerk'], 1)
         mp(AddARTemplate, ['Manager', 'Owner', 'LabManager', 'LabClerk'], 1)
         mp(AddAttachment, ['Manager', 'LabManager', 'Owner' 'Analyst', 'LabClerk', 'Sampler', 'Client'], 0)
@@ -268,6 +268,7 @@ class BikaGenerator:
 
         mp = portal.bika_setup.manage_permission
         mp('Access contents information', ['Authenticated', 'Analyst'], 1)
+        mp(permissions.ModifyPortalContent, ['Manager', 'LabManager'], 0)
         mp(permissions.View, ['Authenticated', 'Analyst'], 1)
         mp(ApplyVersionControl, ['Authenticated'], 1)
         mp(SaveNewVersion, ['Authenticated'], 1)

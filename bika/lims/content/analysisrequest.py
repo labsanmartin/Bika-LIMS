@@ -14,19 +14,22 @@ from Products.CMFCore.utils import getToolByName
 from Products.CMFPlone.utils import safe_unicode
 from Products.CMFPlone.utils import _createObjectByType
 from bika.lims.browser.fields import ARAnalysesField
-from bika.lims.browser.widgets import DateTimeWidget, DecimalWidget
 from bika.lims.config import PROJECTNAME
 from bika.lims.permissions import *
 from bika.lims.content.bikaschema import BikaSchema
 from bika.lims.interfaces import IAnalysisRequest
 from bika.lims.browser.fields import HistoryAwareReferenceField
+from bika.lims.browser.widgets import DateTimeWidget, DecimalWidget
 from bika.lims.browser.widgets import ReferenceWidget
+from bika.lims.browser.widgets import SelectionWidget
 from bika.lims.workflow import skip, isBasicTransitionAllowed
 from bika.lims.workflow import doActionFor
 from decimal import Decimal
 from zope.interface import implements
 from bika.lims import bikaMessageFactory as _
-from bika.lims.utils import t
+from bika.lims.utils import t, getUsers
+
+from bika.lims.browser.widgets import SelectionWidget as BikaSelectionWidget
 
 import sys
 
@@ -60,9 +63,8 @@ schema = BikaSchema.copy() + Schema((
         widget=StringWidget(
             label=_('Request ID'),
             description=_("The ID assigned to the client's request by the lab"),
-            visible={'edit': 'invisible',
-                     'view': 'invisible',
-                     'add': 'invisible'},
+            visible={'view': 'invisible',
+                     'edit': 'invisible'},
         ),
     ),
     ReferenceField(
@@ -83,7 +85,20 @@ schema = BikaSchema.copy() + Schema((
             helper_js=("bika_widgets/referencewidget.js", "++resource++bika.lims.js/contact.js"),
             visible={'edit': 'visible',
                      'view': 'visible',
-                     'add': 'visible'},
+                     'add': 'edit',
+                     'header_table': 'prominent',
+                     'sample_registered': {'view': 'visible', 'edit': 'visible', 'add': 'edit'},
+                     'to_be_sampled':     {'view': 'visible', 'edit': 'visible'},
+                     'sampled':           {'view': 'visible', 'edit': 'visible'},
+                     'to_be_preserved':   {'view': 'visible', 'edit': 'visible'},
+                     'sample_due':        {'view': 'visible', 'edit': 'visible'},
+                     'sample_received':   {'view': 'visible', 'edit': 'visible'},
+                     'attachment_due':    {'view': 'visible', 'edit': 'visible'},
+                     'to_be_verified':    {'view': 'visible', 'edit': 'visible'},
+                     'verified':          {'view': 'visible', 'edit': 'invisible'},
+                     'published':         {'view': 'visible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
             base_query={'inactive_state': 'active'},
             showOn=True,
             popup_width='400px',
@@ -109,7 +124,20 @@ schema = BikaSchema.copy() + Schema((
             size=20,
             visible={'edit': 'visible',
                      'view': 'visible',
-                     'add': 'visible'},
+                     'add': 'edit',
+                     'header_table': 'prominent',
+                     'sample_registered': {'view': 'visible', 'edit': 'visible', 'add': 'edit'},
+                     'to_be_sampled':     {'view': 'visible', 'edit': 'visible'},
+                     'sampled':           {'view': 'visible', 'edit': 'visible'},
+                     'to_be_preserved':   {'view': 'visible', 'edit': 'visible'},
+                     'sample_due':        {'view': 'visible', 'edit': 'visible'},
+                     'sample_received':   {'view': 'visible', 'edit': 'visible'},
+                     'attachment_due':    {'view': 'visible', 'edit': 'visible'},
+                     'to_be_verified':    {'view': 'visible', 'edit': 'visible'},
+                     'verified':          {'view': 'visible', 'edit': 'invisible'},
+                     'published':         {'view': 'visible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
             base_query={'inactive_state': 'active'},
             showOn=True,
             popup_width='400px',
@@ -119,6 +147,46 @@ schema = BikaSchema.copy() + Schema((
                      ],
         ),
     ),
+    ReferenceField(
+        'InvoiceContact',
+        multiValued=False,
+        vocabulary_display_path_bound=sys.maxsize,
+        allowed_types=('Contact',),
+        referenceClass=HoldingReference,
+        relationship='AnalysisRequestInvoiceContact',
+        mode="rw",
+        read_permission=permissions.View,
+        write_permission=EditARContact,
+        widget=ReferenceWidget(
+            label=_("Invoice Contact"),
+            render_own_label=True,
+            size=20,
+            visible={'edit': 'visible',
+                     'view': 'visible',
+                     'add': 'edit',
+                     'header_table': 'prominent',
+                     'sample_registered': {'view': 'visible', 'edit': 'visible', 'add': 'edit'},
+                     'to_be_sampled':     {'view': 'visible', 'edit': 'visible'},
+                     'sampled':           {'view': 'visible', 'edit': 'visible'},
+                     'to_be_preserved':   {'view': 'visible', 'edit': 'visible'},
+                     'sample_due':        {'view': 'visible', 'edit': 'visible'},
+                     'sample_received':   {'view': 'visible', 'edit': 'visible'},
+                     'attachment_due':    {'view': 'visible', 'edit': 'visible'},
+                     'to_be_verified':    {'view': 'visible', 'edit': 'visible'},
+                     'verified':          {'view': 'visible', 'edit': 'invisible'},
+                     'published':         {'view': 'visible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
+
+            base_query={'inactive_state': 'active'},
+            showOn=True,
+            popup_width='400px',
+            colModel=[{'columnName': 'UID', 'hidden': True},
+                      {'columnName': 'Fullname', 'width': '50', 'label': _('Name')},
+                      {'columnName': 'EmailAddress', 'width': '50', 'label': _('Email Address')},
+                     ],
+        ),
+    ),    
     StringField(
         'CCEmails',
         mode="rw",
@@ -128,7 +196,19 @@ schema = BikaSchema.copy() + Schema((
             label=_('CC Emails'),
             visible={'edit': 'visible',
                      'view': 'visible',
-                     'add': 'visible'},
+                     'add': 'edit',
+                     'header_table': 'prominent',
+                     'sample_registered': {'view': 'visible', 'edit': 'visible', 'add': 'edit'},
+                     'to_be_sampled':     {'view': 'visible', 'edit': 'visible'},
+                     'sampled':           {'view': 'visible', 'edit': 'visible'},
+                     'to_be_preserved':   {'view': 'visible', 'edit': 'visible'},
+                     'sample_received':   {'view': 'visible', 'edit': 'visible'},
+                     'attachment_due':    {'view': 'visible', 'edit': 'visible'},
+                     'to_be_verified':    {'view': 'visible', 'edit': 'visible'},
+                     'verified':          {'view': 'visible', 'edit': 'invisible'},
+                     'published':         {'view': 'visible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
             render_own_label=True,
             size=20,
         ),
@@ -147,8 +227,20 @@ schema = BikaSchema.copy() + Schema((
             size=20,
             render_own_label=True,
             visible={'edit': 'visible',
-                     'view': 'invisible',
-                     'add': 'visible'},
+                     'view': 'visible',
+                     'add': 'hidden',
+                     'header_table': 'normal',
+                     'sample_registered': {'view': 'invisible', 'edit': 'invisible', 'add': 'hidden'},
+                     'to_be_sampled':     {'view': 'invisible', 'edit': 'invisible'},
+                     'sampled':           {'view': 'invisible', 'edit': 'invisible'},
+                     'to_be_preserved':   {'view': 'invisible', 'edit': 'invisible'},
+                     'sample_received':   {'view': 'invisible', 'edit': 'invisible'},
+                     'attachment_due':    {'view': 'invisible', 'edit': 'invisible'},
+                     'to_be_verified':    {'view': 'invisible', 'edit': 'invisible'},
+                     'verified':          {'view': 'invisible', 'edit': 'invisible'},
+                     'published':         {'view': 'invisible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'invisible', 'edit': 'invisible'},
+                     },
             base_query={'inactive_state': 'active'},
             showOn=True,
         ),
@@ -169,7 +261,20 @@ schema = BikaSchema.copy() + Schema((
             render_own_label=True,
             visible={'edit': 'visible',
                      'view': 'visible',
-                     'add': 'visible'},
+                     'add': 'edit',
+                     'header_table': 'visible',
+                     'sample_registered': {'view': 'visible', 'edit': 'visible', 'add': 'edit'},
+                     'to_be_sampled':     {'view': 'visible', 'edit': 'invisible'},
+                     'sampled':           {'view': 'visible', 'edit': 'invisible'},
+                     'to_be_preserved':   {'view': 'visible', 'edit': 'invisible'},
+                     'sample_due':        {'view': 'visible', 'edit': 'invisible'},
+                     'sample_received':   {'view': 'visible', 'edit': 'invisible'},
+                     'attachment_due':    {'view': 'visible', 'edit': 'invisible'},
+                     'to_be_verified':    {'view': 'visible', 'edit': 'invisible'},
+                     'verified':          {'view': 'visible', 'edit': 'invisible'},
+                     'published':         {'view': 'visible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
             catalog_name='bika_catalog',
             base_query={'cancellation_state': 'active',
                         'review_state': ['sample_due', 'sample_received', ]},
@@ -189,7 +294,20 @@ schema = BikaSchema.copy() + Schema((
             render_own_label=True,
             visible={'edit': 'visible',
                      'view': 'visible',
-                     'add': 'visible'},
+                     'add': 'edit',
+                     'header_table': 'visible',
+                     'sample_registered': {'view': 'visible', 'edit': 'visible', 'add': 'edit'},
+                     'to_be_sampled':     {'view': 'visible', 'edit': 'visible'},
+                     'sampled':           {'view': 'visible', 'edit': 'visible'},
+                     'to_be_preserved':   {'view': 'visible', 'edit': 'visible'},
+                     'sample_due':        {'view': 'visible', 'edit': 'visible'},
+                     'sample_received':   {'view': 'visible', 'edit': 'visible'},
+                     'attachment_due':    {'view': 'visible', 'edit': 'visible'},
+                     'to_be_verified':    {'view': 'visible', 'edit': 'visible'},
+                     'verified':          {'view': 'visible', 'edit': 'visible'},
+                     'published':         {'view': 'visible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
             catalog_name='bika_catalog',
             base_query={'review_state': 'open',
                         'cancellation_state': 'active'},
@@ -208,7 +326,20 @@ schema = BikaSchema.copy() + Schema((
             render_own_label=True,
             visible={'edit': 'visible',
                      'view': 'visible',
-                     'add': 'visible'},
+                     'add': 'edit',
+                     'header_table': 'visible',
+                     'sample_registered': {'view': 'visible', 'edit': 'visible', 'add': 'edit'},
+                     'to_be_sampled':     {'view': 'visible', 'edit': 'visible'},
+                     'sampled':           {'view': 'visible', 'edit': 'visible'},
+                     'to_be_preserved':   {'view': 'visible', 'edit': 'visible'},
+                     'sample_due':        {'view': 'visible', 'edit': 'visible'},
+                     'sample_received':   {'view': 'visible', 'edit': 'visible'},
+                     'attachment_due':    {'view': 'visible', 'edit': 'visible'},
+                     'to_be_verified':    {'view': 'visible', 'edit': 'visible'},
+                     'verified':          {'view': 'visible', 'edit': 'visible'},
+                     'published':         {'view': 'visible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
             catalog_name='bika_setup_catalog',
             colModel=[
                 {'columnName': 'Title', 'width': '30',
@@ -222,16 +353,6 @@ schema = BikaSchema.copy() + Schema((
             sidx='SortKey',
             sord='asc',
             showOn=True,
-        ),
-    ),
-    ComputedField(
-        'BatchUID',
-        expression='context.getBatch() and context.getBatch().UID() or None',
-        mode="r",
-        read_permission=permissions.View,
-        write_permission=permissions.ModifyPortalContent,
-        widget=ComputedWidget(
-            visible=False,
         ),
     ),
     ReferenceField(
@@ -248,8 +369,21 @@ schema = BikaSchema.copy() + Schema((
             render_own_label=True,
             visible={'edit': 'visible',
                      'view': 'visible',
-                     'add': 'visible',
-                     'secondary': 'invisible'},
+                     'add': 'edit',
+                     'secondary': 'disabled',
+                     'header_table': 'visible',
+                     'sample_registered': {'view': 'visible', 'edit': 'visible', 'add': 'edit'},
+                     'to_be_sampled':     {'view': 'visible', 'edit': 'invisible'},
+                     'sampled':           {'view': 'visible', 'edit': 'invisible'},
+                     'to_be_preserved':   {'view': 'visible', 'edit': 'invisible'},
+                     'sample_due':        {'view': 'visible', 'edit': 'invisible'},
+                     'sample_received':   {'view': 'visible', 'edit': 'invisible'},
+                     'attachment_due':    {'view': 'visible', 'edit': 'invisible'},
+                     'to_be_verified':    {'view': 'visible', 'edit': 'invisible'},
+                     'verified':          {'view': 'visible', 'edit': 'invisible'},
+                     'published':         {'view': 'visible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
             catalog_name='bika_setup_catalog',
             base_query={'inactive_state': 'active'},
             showOn=True,
@@ -269,11 +403,79 @@ schema = BikaSchema.copy() + Schema((
             render_own_label=True,
             visible={'edit': 'visible',
                      'view': 'visible',
-                     'add': 'visible',
-                     'secondary': 'invisible'},
+                     'add': 'edit',
+                     'header_table': 'visible',
+                     'secondary': 'disabled',
+                     'sample_registered': {'view': 'visible', 'edit': 'visible', 'add': 'edit'},
+                     'to_be_sampled':     {'view': 'visible', 'edit': 'invisible'},
+                     'sampled':           {'view': 'visible', 'edit': 'invisible'},
+                     'to_be_preserved':   {'view': 'visible', 'edit': 'invisible'},
+                     'sample_due':        {'view': 'visible', 'edit': 'invisible'},
+                     'sample_received':   {'view': 'visible', 'edit': 'invisible'},
+                     'attachment_due':    {'view': 'visible', 'edit': 'invisible'},
+                     'to_be_verified':    {'view': 'visible', 'edit': 'invisible'},
+                     'verified':          {'view': 'visible', 'edit': 'invisible'},
+                     'published':         {'view': 'visible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
             catalog_name='bika_setup_catalog',
             base_query={'inactive_state': 'active'},
             showOn=True,
+        ),
+    ),
+    # Sample field
+    DateTimeField('DateSampled',
+        mode="rw",
+        read_permission=permissions.View,
+        write_permission=SampleSample,
+        widget = DateTimeWidget(
+            label=_("Date Sampled"),
+            size=20,
+            visible={'edit': 'visible',
+                     'view': 'visible',
+                     'secondary': 'disabled',
+                     'header_table': 'prominent',
+                     'sample_registered': {'view': 'invisible', 'edit': 'invisible'},
+                     'to_be_sampled':     {'view': 'invisible', 'edit': 'visible'},
+                     'sampled':           {'view': 'invisible', 'edit': 'invisible'},
+                     'to_be_preserved':   {'view': 'invisible', 'edit': 'invisible'},
+                     'sample_due':        {'view': 'invisible', 'edit': 'invisible'},
+                     'sample_received':   {'view': 'invisible', 'edit': 'invisible'},
+                     'attachment_due':    {'view': 'invisible', 'edit': 'invisible'},
+                     'to_be_verified':    {'view': 'invisible', 'edit': 'invisible'},
+                     'verified':          {'view': 'invisible', 'edit': 'invisible'},
+                     'published':         {'view': 'invisible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'invisible', 'edit': 'invisible'},
+                     },
+            render_own_label=True,
+        ),
+    ),
+    # Sample field
+    StringField('Sampler',
+        mode="rw",
+        read_permission=permissions.View,
+        write_permission=SampleSample,
+        vocabulary='getSamplers',
+        widget=BikaSelectionWidget(
+            format='select',
+            label=_("Sampler"),
+            # see SamplingWOrkflowWidgetVisibility
+            visible={'edit': 'visible',
+                     'view': 'visible',
+                     'header_table': 'prominent',
+                     'sample_registered': {'view': 'invisible', 'edit': 'invisible'},
+                     'to_be_sampled':     {'view': 'invisible', 'edit': 'visible'},
+                     'sampled':           {'view': 'invisible', 'edit': 'invisible'},
+                     'to_be_preserved':   {'view': 'invisible', 'edit': 'invisible'},
+                     'sample_due':        {'view': 'invisible', 'edit': 'invisible'},
+                     'sample_received':   {'view': 'invisible', 'edit': 'invisible'},
+                     'attachment_due':    {'view': 'invisible', 'edit': 'invisible'},
+                     'to_be_verified':    {'view': 'invisible', 'edit': 'invisible'},
+                     'verified':          {'view': 'invisible', 'edit': 'invisible'},
+                     'published':         {'view': 'invisible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'invisible', 'edit': 'invisible'},
+                     },
+            render_own_label=True,
         ),
     ),
     DateTimeField(
@@ -286,10 +488,23 @@ schema = BikaSchema.copy() + Schema((
             label=_("Sampling Date"),
             size=20,
             render_own_label=True,
+            # see SamplingWOrkflowWidgetVisibility
             visible={'edit': 'visible',
                      'view': 'visible',
-                     'add': 'visible',
-                     'secondary': 'invisible'},
+                     'add': 'edit',
+                     'header_table': 'visible',
+                     'sample_registered': {'view': 'visible', 'edit': 'visible', 'add': 'edit'},
+                     'to_be_sampled':     {'view': 'visible', 'edit': 'invisible'},
+                     'sampled':           {'view': 'visible', 'edit': 'invisible'},
+                     'to_be_preserved':   {'view': 'visible', 'edit': 'invisible'},
+                     'sample_due':        {'view': 'visible', 'edit': 'invisible'},
+                     'sample_received':   {'view': 'visible', 'edit': 'invisible'},
+                     'attachment_due':    {'view': 'visible', 'edit': 'invisible'},
+                     'to_be_verified':    {'view': 'visible', 'edit': 'invisible'},
+                     'verified':          {'view': 'visible', 'edit': 'invisible'},
+                     'published':         {'view': 'visible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
         ),
     ),
     ReferenceField(
@@ -307,13 +522,60 @@ schema = BikaSchema.copy() + Schema((
             render_own_label=True,
             visible={'edit': 'visible',
                      'view': 'visible',
-                     'add': 'visible',
-                     'secondary': 'invisible'},
+                     'add': 'edit',
+                     'header_table': 'visible',
+                     'sample_registered': {'view': 'visible', 'edit': 'visible', 'add': 'edit'},
+                     'to_be_sampled':     {'view': 'visible', 'edit': 'invisible'},
+                     'sampled':           {'view': 'visible', 'edit': 'invisible'},
+                     'to_be_preserved':   {'view': 'visible', 'edit': 'invisible'},
+                     'sample_due':        {'view': 'visible', 'edit': 'invisible'},
+                     'sample_received':   {'view': 'visible', 'edit': 'invisible'},
+                     'attachment_due':    {'view': 'visible', 'edit': 'invisible'},
+                     'to_be_verified':    {'view': 'visible', 'edit': 'invisible'},
+                     'verified':          {'view': 'visible', 'edit': 'invisible'},
+                     'published':         {'view': 'visible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
             catalog_name='bika_setup_catalog',
             base_query={'inactive_state': 'active'},
             showOn=True,
         ),
     ),
+    
+    ReferenceField(
+        'SampleMatrix',
+        required=False,
+        allowed_types='SampleMatrix',
+        relationship='AnalysisRequestSampleMatrix',
+        mode="rw",
+        read_permission=permissions.View,
+        write_permission=permissions.ModifyPortalContent,
+        widget=ReferenceWidget(
+            label=_("Sample Matrix"),
+            size=20,
+            render_own_label=True,
+            visible={'edit': 'visible',
+                     'view': 'visible',
+                     'add': 'edit',
+                     'header_table': 'visible',
+                     'sample_registered': {'view': 'visible', 'edit': 'visible', 'add': 'edit'},
+                     'to_be_sampled':     {'view': 'visible', 'edit': 'invisible'},
+                     'sampled':           {'view': 'visible', 'edit': 'invisible'},
+                     'to_be_preserved':   {'view': 'visible', 'edit': 'invisible'},
+                     'sample_due':        {'view': 'visible', 'edit': 'invisible'},
+                     'sample_received':   {'view': 'visible', 'edit': 'invisible'},
+                     'attachment_due':    {'view': 'visible', 'edit': 'invisible'},
+                     'to_be_verified':    {'view': 'visible', 'edit': 'invisible'},
+                     'verified':          {'view': 'visible', 'edit': 'invisible'},
+                     'published':         {'view': 'visible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
+            catalog_name='bika_setup_catalog',
+            base_query={'inactive_state': 'active'},
+            showOn=True,
+        ),
+    ),
+
     ReferenceField(
         'Specification',
         required=0,
@@ -329,8 +591,20 @@ schema = BikaSchema.copy() + Schema((
             render_own_label=True,
             visible={'edit': 'visible',
                      'view': 'visible',
-                     'add': 'visible',
-                     'secondary': 'invisible'},
+                     'add': 'edit',
+                     'header_table': 'visible',
+                     'sample_registered': {'view': 'visible', 'edit': 'visible', 'add': 'edit'},
+                     'to_be_sampled':     {'view': 'visible', 'edit': 'visible'},
+                     'sampled':           {'view': 'visible', 'edit': 'visible'},
+                     'to_be_preserved':   {'view': 'visible', 'edit': 'visible'},
+                     'sample_due':        {'view': 'visible', 'edit': 'visible'},
+                     'sample_received':   {'view': 'visible', 'edit': 'visible'},
+                     'attachment_due':    {'view': 'visible', 'edit': 'visible'},
+                     'to_be_verified':    {'view': 'visible', 'edit': 'invisible'},
+                     'verified':          {'view': 'visible', 'edit': 'invisible'},
+                     'published':         {'view': 'visible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
             catalog_name='bika_setup_catalog',
             colModel=[
                 {'columnName': 'contextual_title',
@@ -362,8 +636,19 @@ schema = BikaSchema.copy() + Schema((
             render_own_label=True,
             visible={'edit': 'visible',
                      'view': 'visible',
-                     'add': 'invisible',
-                     'secondary': 'invisible'},
+                     'header_table': 'visible',
+                     'sample_registered': {'view': 'invisible', 'edit': 'invisible'},
+                     'to_be_sampled':     {'view': 'invisible', 'edit': 'invisible'},
+                     'sampled':           {'view': 'invisible', 'edit': 'invisible'},
+                     'to_be_preserved':   {'view': 'invisible', 'edit': 'invisible'},
+                     'sample_due':        {'view': 'invisible', 'edit': 'invisible'},
+                     'sample_received':   {'view': 'invisible', 'edit': 'invisible'},
+                     'attachment_due':    {'view': 'invisible', 'edit': 'invisible'},
+                     'to_be_verified':    {'view': 'invisible', 'edit': 'invisible'},
+                     'verified':          {'view': 'visible', 'edit': 'visible'},
+                     'published':         {'view': 'visible', 'edit': 'visible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
             catalog_name='bika_setup_catalog',
             base_query={'inactive_state': 'active'},
             showOn=True,
@@ -383,8 +668,21 @@ schema = BikaSchema.copy() + Schema((
             render_own_label=True,
             visible={'edit': 'visible',
                      'view': 'visible',
-                     'add': 'visible',
-                     'secondary': 'invisible'},
+                     'add': 'edit',
+                     'secondary': 'disabled',
+                     'header_table': 'visible',
+                     'sample_registered': {'view': 'visible', 'edit': 'visible', 'add': 'edit'},
+                     'to_be_sampled':     {'view': 'visible', 'edit': 'visible'}, # LIMS-1159
+                     'sampled':           {'view': 'visible', 'edit': 'visible'},
+                     'to_be_preserved':   {'view': 'visible', 'edit': 'visible'},
+                     'sample_due':        {'view': 'visible', 'edit': 'visible'},
+                     'sample_received':   {'view': 'visible', 'edit': 'visible'},
+                     'attachment_due':    {'view': 'visible', 'edit': 'visible'},
+                     'to_be_verified':    {'view': 'visible', 'edit': 'visible'},
+                     'verified':          {'view': 'visible', 'edit': 'invisible'},
+                     'published':         {'view': 'visible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
             catalog_name='bika_setup_catalog',
             base_query={'inactive_state': 'active'},
             showOn=True,
@@ -404,8 +702,21 @@ schema = BikaSchema.copy() + Schema((
             render_own_label=True,
             visible={'edit': 'visible',
                      'view': 'visible',
-                     'add': 'visible',
-                     'secondary': 'invisible'},
+                     'add': 'edit',
+                     'secondary': 'disabled',
+                     'header_table': 'visible',
+                     'sample_registered': {'view': 'visible', 'edit': 'visible', 'add': 'edit'},
+                     'to_be_sampled':     {'view': 'visible', 'edit': 'visible'},
+                     'sampled':           {'view': 'visible', 'edit': 'visible'},
+                     'to_be_preserved':   {'view': 'visible', 'edit': 'visible'},
+                     'sample_due':        {'view': 'visible', 'edit': 'visible'},
+                     'sample_received':   {'view': 'visible', 'edit': 'visible'},
+                     'attachment_due':    {'view': 'visible', 'edit': 'visible'},
+                     'to_be_verified':    {'view': 'visible', 'edit': 'visible'},
+                     'verified':          {'view': 'visible', 'edit': 'visible'},
+                     'published':         {'view': 'visible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
             catalog_name='bika_setup_catalog',
             base_query={'inactive_state': 'active'},
             showOn=True,
@@ -423,7 +734,20 @@ schema = BikaSchema.copy() + Schema((
             render_own_label=True,
             visible={'edit': 'visible',
                      'view': 'visible',
-                     'add': 'visible'},
+                     'add': 'edit',
+                     'header_table': 'visible',
+                     'sample_registered': {'view': 'visible', 'edit': 'visible', 'add': 'edit'},
+                     'to_be_sampled':     {'view': 'visible', 'edit': 'visible'},
+                     'sampled':           {'view': 'visible', 'edit': 'visible'},
+                     'to_be_preserved':   {'view': 'visible', 'edit': 'visible'},
+                     'sample_due':        {'view': 'visible', 'edit': 'visible'},
+                     'sample_received':   {'view': 'visible', 'edit': 'visible'},
+                     'attachment_due':    {'view': 'visible', 'edit': 'visible'},
+                     'to_be_verified':    {'view': 'visible', 'edit': 'visible'},
+                     'verified':          {'view': 'visible', 'edit': 'visible'},
+                     'published':         {'view': 'visible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
         ),
     ),
     # Sample field
@@ -439,8 +763,21 @@ schema = BikaSchema.copy() + Schema((
             render_own_label=True,
             visible={'edit': 'visible',
                      'view': 'visible',
-                     'add': 'visible',
-                     'secondary': 'invisible'},
+                     'add': 'edit',
+                     'secondary': 'disabled',
+                     'header_table': 'visible',
+                     'sample_registered': {'view': 'visible', 'edit': 'visible', 'add': 'edit'},
+                     'to_be_sampled':     {'view': 'visible', 'edit': 'visible'},
+                     'sampled':           {'view': 'visible', 'edit': 'visible'},
+                     'to_be_preserved':   {'view': 'visible', 'edit': 'visible'},
+                     'sample_due':        {'view': 'visible', 'edit': 'visible'},
+                     'sample_received':   {'view': 'visible', 'edit': 'visible'},
+                     'attachment_due':    {'view': 'visible', 'edit': 'visible'},
+                     'to_be_verified':    {'view': 'visible', 'edit': 'visible'},
+                     'verified':          {'view': 'visible', 'edit': 'visible'},
+                     'published':         {'view': 'visible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
         ),
     ),
     # Sample field
@@ -456,8 +793,21 @@ schema = BikaSchema.copy() + Schema((
             render_own_label=True,
             visible={'edit': 'visible',
                      'view': 'visible',
-                     'add': 'visible',
-                     'secondary': 'invisible'},
+                     'add': 'edit',
+                     'secondary': 'disabled',
+                     'header_table': 'visible',
+                     'sample_registered': {'view': 'visible', 'edit': 'visible'},
+                     'to_be_sampled':     {'view': 'visible', 'edit': 'invisible'},
+                     'sampled':           {'view': 'visible', 'edit': 'invisible'},
+                     'to_be_preserved':   {'view': 'visible', 'edit': 'invisible'},
+                     'sample_due':        {'view': 'visible', 'edit': 'invisible'},
+                     'sample_received':   {'view': 'visible', 'edit': 'invisible'},
+                     'attachment_due':    {'view': 'visible', 'edit': 'invisible'},
+                     'to_be_verified':    {'view': 'visible', 'edit': 'invisible'},
+                     'verified':          {'view': 'visible', 'edit': 'invisible'},
+                     'published':         {'view': 'visible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
         ),
     ),
     # Sample field
@@ -474,8 +824,20 @@ schema = BikaSchema.copy() + Schema((
             render_own_label=True,
             visible={'edit': 'visible',
                      'view': 'visible',
-                     'add': 'visible',
-                     'secondary': 'invisible'},
+                     'add': 'edit',
+                     'header_table': 'visible',
+                     'sample_registered': {'view': 'visible', 'edit': 'visible', 'add': 'edit'},
+                     'to_be_sampled':     {'view': 'visible', 'edit': 'visible'},
+                     'sampled':           {'view': 'visible', 'edit': 'visible'},
+                     'to_be_preserved':   {'view': 'visible', 'edit': 'visible'},
+                     'sample_due':        {'view': 'visible', 'edit': 'visible'},
+                     'sample_received':   {'view': 'visible', 'edit': 'invisible'},
+                     'attachment_due':    {'view': 'visible', 'edit': 'invisible'},
+                     'to_be_verified':    {'view': 'visible', 'edit': 'invisible'},
+                     'verified':          {'view': 'visible', 'edit': 'invisible'},
+                     'published':         {'view': 'visible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
             catalog_name='bika_setup_catalog',
             base_query={'inactive_state': 'active'},
             showOn=True,
@@ -496,8 +858,21 @@ schema = BikaSchema.copy() + Schema((
             render_own_label=True,
             visible={'edit': 'visible',
                      'view': 'visible',
-                     'add': 'visible',
-                     'secondary': 'invisible'},
+                     'add': 'edit',
+                     'secondary': 'disabled',
+                     'header_table': 'visible',
+                     'sample_registered': {'view': 'visible', 'edit': 'visible', 'add': 'edit'},
+                     'to_be_sampled':     {'view': 'visible', 'edit': 'visible'},
+                     'sampled':           {'view': 'visible', 'edit': 'visible'},
+                     'to_be_preserved':   {'view': 'visible', 'edit': 'visible'},
+                     'sample_due':        {'view': 'visible', 'edit': 'visible'},
+                     'sample_received':   {'view': 'visible', 'edit': 'invisible'},
+                     'attachment_due':    {'view': 'visible', 'edit': 'invisible'},
+                     'to_be_verified':    {'view': 'visible', 'edit': 'invisible'},
+                     'verified':          {'view': 'visible', 'edit': 'invisible'},
+                     'published':         {'view': 'visible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
             catalog_name='bika_setup_catalog',
             base_query={'inactive_state': 'active'},
             showOn=True,
@@ -518,8 +893,20 @@ schema = BikaSchema.copy() + Schema((
             render_own_label=True,
             visible={'edit': 'visible',
                      'view': 'visible',
-                     'add': 'visible',
-                     'secondary': 'invisible'},
+                     'add': 'edit',
+                     'header_table': 'visible',
+                     'sample_registered': {'view': 'visible', 'edit': 'visible', 'add': 'edit'},
+                     'to_be_sampled':     {'view': 'visible', 'edit': 'invisible'},
+                     'sampled':           {'view': 'visible', 'edit': 'invisible'},
+                     'to_be_preserved':   {'view': 'visible', 'edit': 'invisible'},
+                     'sample_due':        {'view': 'visible', 'edit': 'invisible'},
+                     'sample_received':   {'view': 'visible', 'edit': 'invisible'},
+                     'attachment_due':    {'view': 'visible', 'edit': 'invisible'},
+                     'to_be_verified':    {'view': 'visible', 'edit': 'invisible'},
+                     'verified':          {'view': 'visible', 'edit': 'invisible'},
+                     'published':         {'view': 'visible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
             catalog_name='bika_setup_catalog',
             base_query={'inactive_state': 'active'},
             showOn=True,
@@ -537,8 +924,21 @@ schema = BikaSchema.copy() + Schema((
             render_own_label=True,
             visible={'edit': 'visible',
                      'view': 'visible',
-                     'add': 'visible',
-                     'secondary': 'invisible'},
+                     'add': 'edit',
+                     'secondary': 'disabled',
+                     'header_table': 'visible',
+                     'sample_registered': {'view': 'visible', 'edit': 'visible', 'add': 'edit'},
+                     'to_be_sampled':     {'view': 'visible', 'edit': 'invisible'},
+                     'sampled':           {'view': 'visible', 'edit': 'invisible'},
+                     'to_be_preserved':   {'view': 'visible', 'edit': 'invisible'},
+                     'sample_due':        {'view': 'visible', 'edit': 'invisible'},
+                     'sample_received':   {'view': 'visible', 'edit': 'invisible'},
+                     'attachment_due':    {'view': 'visible', 'edit': 'invisible'},
+                     'to_be_verified':    {'view': 'visible', 'edit': 'invisible'},
+                     'verified':          {'view': 'visible', 'edit': 'invisible'},
+                     'published':         {'view': 'visible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
         ),
     ),
     # Sample field
@@ -553,8 +953,21 @@ schema = BikaSchema.copy() + Schema((
             render_own_label=True,
             visible={'edit': 'visible',
                      'view': 'visible',
-                     'add': 'visible',
-                     'secondary': 'invisible'},
+                     'add': 'edit',
+                     'secondary': 'disabled',
+                     'header_table': 'visible',
+                     'sample_registered': {'view': 'visible', 'edit': 'visible', 'add': 'edit'},
+                     'to_be_sampled':     {'view': 'visible', 'edit': 'visible'},
+                     'sampled':           {'view': 'visible', 'edit': 'visible'},
+                     'to_be_preserved':   {'view': 'visible', 'edit': 'visible'},
+                     'sample_due':        {'view': 'visible', 'edit': 'visible'},
+                     'sample_received':   {'view': 'visible', 'edit': 'visible'},
+                     'attachment_due':    {'view': 'visible', 'edit': 'visible'},
+                     'to_be_verified':    {'view': 'visible', 'edit': 'visible'},
+                     'verified':          {'view': 'visible', 'edit': 'invisible'},
+                     'published':         {'view': 'visible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
         ),
     ),
     BooleanField(
@@ -569,8 +982,21 @@ schema = BikaSchema.copy() + Schema((
             description=_('These results can be reported as dry matter'),
             visible={'edit': 'visible',
                      'view': 'visible',
-                     'add': 'visible',
-                     'secondary': 'visible'},
+                     'add': 'edit',
+                     'secondary': 'visible',
+                     'header_table': 'visible',
+                     'sample_registered': {'view': 'visible', 'edit': 'visible', 'add': 'edit'},
+                     'to_be_sampled':     {'view': 'visible', 'edit': 'visible'},
+                     'sampled':           {'view': 'visible', 'edit': 'visible'},
+                     'to_be_preserved':   {'view': 'visible', 'edit': 'visible'},
+                     'sample_due':        {'view': 'visible', 'edit': 'visible'},
+                     'sample_received':   {'view': 'visible', 'edit': 'visible'},
+                     'attachment_due':    {'view': 'visible', 'edit': 'visible'},
+                     'to_be_verified':    {'view': 'visible', 'edit': 'visible'},
+                     'verified':          {'view': 'visible', 'edit': 'invisible'},
+                     'published':         {'view': 'visible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
         ),
     ),
     BooleanField(
@@ -585,8 +1011,21 @@ schema = BikaSchema.copy() + Schema((
             render_own_label=True,
             visible={'edit': 'visible',
                      'view': 'visible',
-                     'add': 'visible',
-                     'secondary': 'visible'},
+                     'add': 'edit',
+                     'secondary': 'visible',
+                     'header_table': 'visible',
+                     'sample_registered': {'view': 'visible', 'edit': 'visible', 'add': 'edit'},
+                     'to_be_sampled':     {'view': 'visible', 'edit': 'visible'},
+                     'sampled':           {'view': 'visible', 'edit': 'visible'},
+                     'to_be_preserved':   {'view': 'visible', 'edit': 'visible'},
+                     'sample_due':        {'view': 'visible', 'edit': 'visible'},
+                     'sample_received':   {'view': 'visible', 'edit': 'invisible'},
+                     'attachment_due':    {'view': 'visible', 'edit': 'invisible'},
+                     'to_be_verified':    {'view': 'visible', 'edit': 'invisible'},
+                     'verified':          {'view': 'visible', 'edit': 'invisible'},
+                     'published':         {'view': 'visible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
         ),
     ),
     ARAnalysesField(
@@ -595,6 +1034,12 @@ schema = BikaSchema.copy() + Schema((
         mode="rw",
         read_permission=permissions.View,
         write_permission=permissions.ModifyPortalContent,
+        widget=ComputedWidget(
+            visible={'edit': 'invisible',
+                     'view': 'invisible',
+                     'sample_registered': {'view': 'visible', 'edit': 'visible', 'add': 'invisible'},
+                     }
+        ),
     ),
     ReferenceField(
         'Attachment',
@@ -605,6 +1050,11 @@ schema = BikaSchema.copy() + Schema((
         mode="rw",
         read_permission=permissions.View,
         write_permission=permissions.ModifyPortalContent,
+        widget=ComputedWidget(
+            visible={'edit': 'invisible',
+                     'view': 'invisible',
+                     },
+        )
     ),
     ReferenceField(
         'Invoice',
@@ -615,6 +1065,11 @@ schema = BikaSchema.copy() + Schema((
         mode="rw",
         read_permission=permissions.View,
         write_permission=permissions.ModifyPortalContent,
+        widget=ComputedWidget(
+            visible={'edit': 'invisible',
+                     'view': 'invisible',
+                     },
+        )
     ),
     DateTimeField(
         'DateReceived',
@@ -623,9 +1078,21 @@ schema = BikaSchema.copy() + Schema((
         write_permission=permissions.ModifyPortalContent,
         widget=DateTimeWidget(
             label=_('Date Received'),
-            visible={'edit': 'invisible',
+            visible={'edit': 'visible',
                      'view': 'visible',
-                     'add': 'invisible'},
+                     'header_table': 'visible',
+                     'sample_registered': {'view': 'invisible', 'edit': 'invisible', 'add': 'invisible'},
+                     'to_be_sampled':     {'view': 'invisible', 'edit': 'invisible'},
+                     'sampled':           {'view': 'invisible', 'edit': 'invisible'},
+                     'to_be_preserved':   {'view': 'invisible', 'edit': 'invisible'},
+                     'sample_due':        {'view': 'invisible', 'edit': 'invisible'},
+                     'sample_received':   {'view': 'visible', 'edit': 'invisible'},
+                     'attachment_due':    {'view': 'visible', 'edit': 'invisible'},
+                     'to_be_verified':    {'view': 'visible', 'edit': 'invisible'},
+                     'verified':          {'view': 'visible', 'edit': 'invisible'},
+                     'published':         {'view': 'visible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
         ),
     ),
     DateTimeField(
@@ -635,9 +1102,22 @@ schema = BikaSchema.copy() + Schema((
         write_permission=permissions.ModifyPortalContent,
         widget=DateTimeWidget(
             label=_('Date Published'),
-            visible={'edit': 'invisible',
+            visible={'edit': 'visible',
                      'view': 'visible',
-                     'add': 'invisible'},
+                     'add': 'invisible',
+                     'header_table': 'visible',
+                     'sample_registered': {'view': 'invisible', 'edit': 'invisible', 'add': 'invisible'},
+                     'to_be_sampled':     {'view': 'invisible', 'edit': 'invisible'},
+                     'sampled':           {'view': 'invisible', 'edit': 'invisible'},
+                     'to_be_preserved':   {'view': 'invisible', 'edit': 'invisible'},
+                     'sample_due':        {'view': 'invisible', 'edit': 'invisible'},
+                     'sample_received':   {'view': 'invisible', 'edit': 'invisible'},
+                     'attachment_due':    {'view': 'invisible', 'edit': 'invisible'},
+                     'to_be_verified':    {'view': 'invisible', 'edit': 'invisible'},
+                     'verified':          {'view': 'invisible', 'edit': 'invisible'},
+                     'published':         {'view': 'visible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
         ),
     ),
     TextField(
@@ -653,6 +1133,11 @@ schema = BikaSchema.copy() + Schema((
             macro="bika_widgets/remarks",
             label=_('Remarks'),
             append_only=True,
+            visible={'edit': 'visible',
+                     'view': 'visible',
+                     'add': 'invisible',
+                     'sample_registered': {'view': 'invisible', 'edit': 'invisible', 'add': 'invisible'},
+                     },
         ),
     ),
     FixedPointField(
@@ -665,21 +1150,11 @@ schema = BikaSchema.copy() + Schema((
             label=_('Member discount %'),
             description=_('Enter percentage value eg. 33.0'),
             render_own_label=True,
-            visible={'edit': 'invisible',
-                     'view': 'visible',
-                     'add': 'invisible'},
-        ),
-    ),
-    ComputedField(
-        'DateSampled',
-        expression="here.getSample() and here.getSample().getDateSampled() or ''",
-        mode="r",
-        read_permission=permissions.View,
-        widget=StringWidget(
-            label=_('Date Sampled'),
             visible={'edit': 'visible',
                      'view': 'visible',
-                     'add': 'invisible'},
+                     'add': 'invisible',
+                     'sample_registered': {'view': 'invisible', 'edit': 'invisible', 'add': 'invisible'},
+                     },
         ),
     ),
     ComputedField(
@@ -780,8 +1255,21 @@ schema = BikaSchema.copy() + Schema((
             render_own_label=True,
             visible={'edit': 'visible',
                      'view': 'visible',
-                     'add': 'visible',
-                     'secondary': 'invisible'},
+                     'add': 'edit',
+                     'secondary': 'disabled',
+                     'header_table': 'visible',
+                     'sample_registered': {'view': 'visible', 'edit': 'visible', 'add': 'edit'},
+                     'to_be_sampled':     {'view': 'visible', 'edit': 'visible'},
+                     'sampled':           {'view': 'visible', 'edit': 'visible'},
+                     'to_be_preserved':   {'view': 'visible', 'edit': 'visible'},
+                     'sample_due':        {'view': 'visible', 'edit': 'visible'},
+                     'sample_received':   {'view': 'visible', 'edit': 'visible'},
+                     'attachment_due':    {'view': 'visible', 'edit': 'visible'},
+                     'to_be_verified':    {'view': 'visible', 'edit': 'visible'},
+                     'verified':          {'view': 'visible', 'edit': 'visible'},
+                     'published':         {'view': 'visible', 'edit': 'invisible'},
+                     'invalid':           {'view': 'visible', 'edit': 'invisible'},
+                     },
             catalog_name='bika_setup_catalog',
             base_query={'inactive_state': 'active'},
             colModel=[
@@ -802,6 +1290,16 @@ schema = BikaSchema.copy() + Schema((
 
 
 schema['title'].required = False
+
+schema['id'].widget.visible = {
+    'edit': 'invisible',
+    'view': 'invisible',
+}
+
+schema['title'].widget.visible = {
+    'edit': 'invisible',
+    'view': 'invisible',
+}
 
 
 class AnalysisRequest(BaseFolder):
@@ -916,6 +1414,19 @@ class AnalysisRequest(BaseFolder):
         return
 
     security.declareProtected(View, 'getResponsible')
+
+    def getAnalysesNum(self):
+        """ Return the amount of analyses verified/total in the current AR """
+        verified = 0
+        total = 0
+        for analysis in self.objectValues('Analysis'):
+            workflow = getToolByName(analysis, 'portal_workflow')
+            review_state = workflow.getInfoFor(analysis, 'review_state', '')
+            if review_state in ['verified' ,'published']:
+                verified += 1
+            if review_state not in 'retracted':
+                total += 1
+        return verified,total
 
     def getResponsible(self):
         """ Return all manager info of responsible departments """
@@ -1205,7 +1716,7 @@ class AnalysisRequest(BaseFolder):
         """ return current date """
         return DateTime()
 
-    def getQCAnalyses(self, qctype=None):
+    def getQCAnalyses(self, qctype=None, review_state=None):
         """ return the QC analyses performed in the worksheet in which, at
             least, one sample of this AR is present.
             Depending on qctype value, returns the analyses of:
@@ -1217,6 +1728,7 @@ class AnalysisRequest(BaseFolder):
         qcanalyses = []
         suids = []
         ans = self.getAnalyses()
+        wf = getToolByName(self, 'portal_workflow')
         for an in ans:
             an = an.getObject()
             if an.getServiceUID() not in suids:
@@ -1232,13 +1744,15 @@ class AnalysisRequest(BaseFolder):
                     if wa.portal_type == 'DuplicateAnalysis' \
                         and wa.getRequestID() == self.id \
                         and wa not in qcanalyses \
-                            and (qctype is None or wa.getReferenceType() == qctype):
+                            and (qctype is None or wa.getReferenceType() == qctype) \
+                            and (review_state is None or wf.getInfoFor(wa, 'review_state') in review_state):
                         qcanalyses.append(wa)
 
                     elif wa.portal_type == 'ReferenceAnalysis' \
                         and wa.getServiceUID() in suids \
                         and wa not in qcanalyses \
-                            and (qctype is None or wa.getReferenceType() == qctype):
+                            and (qctype is None or wa.getReferenceType() == qctype) \
+                            and (review_state is None or wf.getInfoFor(wa, 'review_state') in review_state):
                         qcanalyses.append(wa)
 
         return qcanalyses
@@ -1291,7 +1805,8 @@ class AnalysisRequest(BaseFolder):
     def setSamplingDate(self, value):
         sample = self.getSample()
         if sample and value:
-            return sample.setSamplingDate(value)
+            sample.setSamplingDate(value)
+        self.Schema()['SamplingDate'].set(self, value)
 
     security.declarePublic('getSamplingDate')
 
@@ -1299,13 +1814,47 @@ class AnalysisRequest(BaseFolder):
         sample = self.getSample()
         if sample:
             return sample.getSamplingDate()
+        return self.Schema().getField('SamplingDate').get(self)
+
+    security.declarePublic('setSampler')
+
+    def setSampler(self, value):
+        sample = self.getSample()
+        if sample and value:
+            sample.setSampler(value)
+        self.Schema()['Sampler'].set(self, value)
+
+    security.declarePublic('getSampler')
+
+    def getSampler(self):
+        sample = self.getSample()
+        if sample:
+            return sample.getSampler()
+        return self.Schema().getField('Sampler').get(self)
+
+    security.declarePublic('setDateSampled')
+
+    def setDateSampled(self, value):
+        sample = self.getSample()
+        if sample and value:
+            sample.setDateSampled(value)
+        self.Schema()['DateSampled'].set(self, value)
+
+    security.declarePublic('getDateSampled')
+
+    def getDateSampled(self):
+        sample = self.getSample()
+        if sample:
+            return sample.getDateSampled()
+        return self.Schema().getField('DateSampled').get(self)
 
     security.declarePublic('setSamplePoint')
 
     def setSamplePoint(self, value):
         sample = self.getSample()
         if sample and value:
-            return sample.setSamplePoint(value)
+            sample.setSamplePoint(value)
+        self.Schema()['SamplePoint'].set(self, value)
 
     security.declarePublic('getSamplepoint')
 
@@ -1313,13 +1862,15 @@ class AnalysisRequest(BaseFolder):
         sample = self.getSample()
         if sample:
             return sample.getSamplePoint()
+        return self.Schema().getField('SamplePoint').get(self)
 
     security.declarePublic('setSampleType')
 
     def setSampleType(self, value):
         sample = self.getSample()
         if sample and value:
-            return sample.setSampleType(value)
+            sample.setSampleType(value)
+        self.Schema()['SampleType'].set(self, value)
 
     security.declarePublic('getSampleType')
 
@@ -1327,13 +1878,31 @@ class AnalysisRequest(BaseFolder):
         sample = self.getSample()
         if sample:
             return sample.getSampleType()
+        return self.Schema().getField('SampleType').get(self)
+
+    security.declarePublic('setSampleMatrix')
+
+    def setSampleMatrix(self, value):
+        sample = self.getSample()
+        if sample and value:
+            sample.setSampleMatrix(value)
+        self.Schema()['SampleMatrix'].set(self, value)
+
+    security.declarePublic('getSampleMatrix')
+
+    def getSampleMatrix(self):
+        sample = self.getSample()
+        if sample:
+            return sample.getSampleMatrix()
+        return self.Schema().getField('SampleMatrix').get(self)
 
     security.declarePublic('setClientReference')
 
     def setClientReference(self, value):
         sample = self.getSample()
         if sample and value:
-            return sample.setClientReference(value)
+            sample.setClientReference(value)
+        self.Schema()['ClientReference'].set(self, value)
 
     security.declarePublic('getClientReference')
 
@@ -1341,13 +1910,15 @@ class AnalysisRequest(BaseFolder):
         sample = self.getSample()
         if sample:
             return sample.getClientReference()
+        return self.Schema().getField('ClientReference').get(self)
 
     security.declarePublic('setClientSampleID')
 
     def setClientSampleID(self, value):
         sample = self.getSample()
         if sample and value:
-            return sample.setClientSampleID(value)
+            sample.setClientSampleID(value)
+        self.Schema()['ClientSampleID'].set(self, value)
 
     security.declarePublic('getClientSampleID')
 
@@ -1355,13 +1926,15 @@ class AnalysisRequest(BaseFolder):
         sample = self.getSample()
         if sample:
             return sample.getClientSampleID()
+        return self.Schema().getField('ClientSampleID').get(self)
 
     security.declarePublic('setSamplingDeviation')
 
     def setSamplingDeviation(self, value):
         sample = self.getSample()
         if sample and value:
-            return sample.setSamplingDeviation(value)
+            sample.setSamplingDeviation(value)
+        self.Schema()['SamplingDeviation'].set(self, value)
 
     security.declarePublic('getSamplingDeviation')
 
@@ -1369,13 +1942,15 @@ class AnalysisRequest(BaseFolder):
         sample = self.getSample()
         if sample:
             return sample.getSamplingDeviation()
+        return self.Schema().getField('SamplingDeviation').get(self)
 
     security.declarePublic('setSampleCondition')
 
     def setSampleCondition(self, value):
         sample = self.getSample()
         if sample and value:
-            return sample.setSampleCondition(value)
+            sample.setSampleCondition(value)
+        self.Schema()['SampleCondition'].set(self, value)
 
     security.declarePublic('getSampleCondition')
 
@@ -1383,13 +1958,15 @@ class AnalysisRequest(BaseFolder):
         sample = self.getSample()
         if sample:
             return sample.getSampleCondition()
+        return self.Schema().getField('SampleCondition').get(self)
 
     security.declarePublic('setComposite')
 
     def setComposite(self, value):
         sample = self.getSample()
         if sample and value:
-            return sample.setComposite(value)
+            sample.setComposite(value)
+        self.Schema()['Composite'].set(self, value)
 
     security.declarePublic('getComposite')
 
@@ -1397,13 +1974,15 @@ class AnalysisRequest(BaseFolder):
         sample = self.getSample()
         if sample:
             return sample.getComposite()
+        return self.Schema().getField('Composite').get(self)
 
     security.declarePublic('setStorageLocation')
 
     def setStorageLocation(self, value):
         sample = self.getSample()
         if sample and value:
-            return sample.setStorageLocation(value)
+            sample.setStorageLocation(value)
+        self.Schema()['StorageLocation'].set(self, value)
 
     security.declarePublic('getStorageLocation')
 
@@ -1411,13 +1990,15 @@ class AnalysisRequest(BaseFolder):
         sample = self.getSample()
         if sample:
             return sample.getStorageLocation()
+        return self.Schema().getField('StorageLocation').get(self)
 
     security.declarePublic('setAdHoc')
 
     def setAdHoc(self, value):
         sample = self.getSample()
         if sample and value:
-            return sample.setAdHoc(value)
+            sample.setAdHoc(value)
+        self.Schema()['AdHoc'].set(self, value)
 
     security.declarePublic('getAdHoc')
 
@@ -1425,6 +2006,10 @@ class AnalysisRequest(BaseFolder):
         sample = self.getSample()
         if sample:
             return sample.getAdHoc()
+        return self.Schema().getField('AdHoc').get(self)
+
+    def getSamplers(self):
+        return getUsers(self, ['LabManager', 'Sampler'])
 
     def guard_unassign_transition(self):
         """Allow or disallow transition depending on our children's states
@@ -1518,8 +2103,9 @@ class AnalysisRequest(BaseFolder):
         return
 
     def workflow_script_sample(self):
-        if skip(self, "sample"):
-            return
+        # no skip check here: the sampling workflow UI is odd
+        # if skip(self, "sample"):
+        #     return
         # transition our sample
         workflow = getToolByName(self, 'portal_workflow')
         sample = self.getSample()

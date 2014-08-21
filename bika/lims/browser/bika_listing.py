@@ -182,7 +182,7 @@ class BikaListingView(BrowserView):
     show_workflow_action_buttons = True
     show_column_toggles = True
     categories = []
-    # setting pagesize to 1000 specifically disables the batch sizez dropdown
+    # setting pagesize to 0 specifically disables the batch size dropdown
     pagesize = 25
     pagenumber = 1
     # select checkbox is normally called uids:list
@@ -325,18 +325,18 @@ class BikaListingView(BrowserView):
             self.contentFilter[k] = v
 
         # sort on
-        sort_on = self.request.get(form_id + '_sort_on', '')
+        self.sort_on = self.request.get(form_id + '_sort_on', None)
         # manual_sort_on: only sort the current batch of items
         # this is a compromise for sorting without column indexes
         self.manual_sort_on = None
-        if sort_on \
-           and sort_on in self.columns.keys() \
-           and self.columns[sort_on].get('index', None):
-            idx = self.columns[sort_on].get('index', sort_on)
+        if self.sort_on \
+           and self.sort_on in self.columns.keys() \
+           and self.columns[self.sort_on].get('index', None):
+            idx = self.columns[self.sort_on].get('index', self.sort_on)
             self.contentFilter['sort_on'] = idx
         else:
-            if sort_on:
-                self.manual_sort_on = sort_on
+            if self.sort_on:
+                self.manual_sort_on = self.sort_on
                 if 'sort_on' in self.contentFilter:
                     del self.contentFilter['sort_on']
 
@@ -361,10 +361,12 @@ class BikaListingView(BrowserView):
         try:
             pagesize = int(pagesize)
         except:
-            pagesize = self.pagesize
+            pagesize = self.pagesize = 10
         self.pagesize = pagesize
         # Plone's batching wants this variable:
         self.request.set('pagesize', self.pagesize)
+        # and we want to make our choice remembered in bika_listing also
+        self.request.set(self.form_id + '_pagesize', self.pagesize)
 
         # pagenumber
         self.pagenumber = int(self.request.get(form_id + '_pagenumber', self.pagenumber))
@@ -476,12 +478,19 @@ class BikaListingView(BrowserView):
                                         or self.columns[col]['toggle'] == True)])
         return toggle_cols
 
-    def GET_url(self, **kwargs):
+    def GET_url(self, include_current=True, **kwargs):
         url = self.request['URL'].split("?")[0]
+        # take values from form (both html form and GET request slurped here)
         query = {}
-        for x in "pagenumber", "pagesize", "review_state":
-            if str(getattr(self, x)) != 'None':
+        if include_current:
+            for k, v in self.request.form.items():
+                if k.startswith(self.form_id + "_") and not "uids" in k:
+                    query[k] = v
+        # override from self attributes
+        for x in "pagenumber", "pagesize", "review_state", "sort_order", "sort_on":
+            if str(getattr(self, x, None)) != 'None':
                 query['%s_%s'%(self.form_id, x)] = getattr(self, x)
+        # then override with passed kwargs
         for x in kwargs.keys():
             query['%s_%s'%(self.form_id, x)] = kwargs.get(x)
         if query:
@@ -546,11 +555,17 @@ class BikaListingView(BrowserView):
         workflow = getToolByName(context, 'portal_workflow')
         site_properties = portal_properties.site_properties
         norm = getUtility(IIDNormalizer).normalize
-        show_all = self.request.get('show_all', '').lower() == 'true' or self.show_all==True
+        if self.request.get('show_all', '').lower() == 'true' \
+                or self.show_all == True \
+                or self.pagesize == 0:
+            show_all = True
+        else:
+            show_all = False
+
         pagenumber = int(self.request.get('pagenumber', 1) or 1)
         pagesize = self.pagesize
         start = (pagenumber - 1) * pagesize
-        end = start + pagesize
+        end = start + pagesize - 1
 
         if (hasattr(self, 'And') and self.And) \
            or (hasattr(self, 'Or') and self.Or):
@@ -573,11 +588,11 @@ class BikaListingView(BrowserView):
                 brains = self.contentsMethod(self.contentFilter)
         else:
             brains = self.contentsMethod(self.contentFilter)
+
         results = []
         self.page_start_index = 0
-        current_index = 0
+        current_index = -1
         for i, obj in enumerate(brains):
-            current_index += 1
             # we don't know yet if it's a brain or an object
             path = hasattr(obj, 'getPath') and obj.getPath() or \
                  "/".join(obj.getPhysicalPath())
@@ -592,7 +607,9 @@ class BikaListingView(BrowserView):
 
             # avoid creating unnecessary info for items outside the current
             # batch;  only the path is needed for the "select all" case...
-            if not show_all and not start <= current_index < end:
+            # we only take allowed items into account
+            current_index += 1
+            if not show_all and not (start <= current_index <= end):
                 results.append(dict(path = path, uid = obj.UID()))
                 continue
 
@@ -754,6 +771,15 @@ class BikaListingView(BrowserView):
         else:
             actions = transitions.values()
 
+        new_actions = []
+        # remove any invalid items with a warning
+        for a,action in enumerate(actions):
+            if isinstance(action, dict) \
+                    and 'id' in action:
+                new_actions.append(action)
+            else:
+                logger.warning("bad action in custom_actions: %s. (complete list: %s)."%(action,actions))
+
         # and these are removed
         if 'hide_transitions' in review_state:
             actions = [a for a in actions
@@ -769,11 +795,12 @@ class BikaListingView(BrowserView):
         # on the BikaListingView, add these actions to the list.
         if 'custom_actions' in review_state:
             for action in review_state['custom_actions']:
-                actions.append(action)
+                if isinstance(action, dict) \
+                        and 'id' in action:
+                    actions.append(action)
 
         for a,action in enumerate(actions):
-            actions[a]['title'] = \
-                t(PMF(actions[a]['id'] + "_transition_title"))
+            actions[a]['title'] = t(PMF(actions[a]['id'] + "_transition_title"))
         return actions
 
     def getPriorityIcon(self):
@@ -794,6 +821,8 @@ class BikaListingTable(tableview.Table):
         self.bika_listing = bika_listing
         self.pagesize = bika_listing.pagesize
         folderitems = bika_listing.folderitems()
+        if self.pagesize == 0:
+            self.pagesize = len(folderitems)
         bika_listing.items = folderitems
         self.hide_hidden_attributes()
 
@@ -802,7 +831,7 @@ class BikaListingTable(tableview.Table):
             psi = self.bika_listing.page_start_index
             psi = psi and psi or 0
             # We do a sort of the current page using self.manual_sort_on, here
-            page = folderitems[psi:psi+self.bika_listing.pagesize]
+            page = folderitems[psi:psi+self.pagesize]
             page.sort(lambda x,y:cmp(x.get(self.bika_listing.manual_sort_on, ''),
                                      y.get(self.bika_listing.manual_sort_on, '')))
 
@@ -811,7 +840,7 @@ class BikaListingTable(tableview.Table):
 
             folderitems = folderitems[:psi] \
                 + page \
-                + folderitems[psi+self.bika_listing.pagesize:]
+                + folderitems[psi+self.pagesize:]
 
 
         tableview.Table.__init__(self,
@@ -819,7 +848,7 @@ class BikaListingTable(tableview.Table):
                                  bika_listing.base_url,
                                  bika_listing.view_url,
                                  folderitems,
-                                 pagesize = bika_listing.pagesize)
+                                 pagesize = self.pagesize)
 
         self.context = bika_listing.context
         self.request = bika_listing.request

@@ -4,7 +4,6 @@ from Products.Archetypes.config import REFERENCE_CATALOG
 from Products.Archetypes.public import DisplayList
 from Products.CMFCore.utils import getToolByName
 from Products.CMFPlone.utils import _createObjectByType
-from bika.lims.adapters.widgetvisibility import WidgetVisibility as _WV
 from bika.lims.browser import BrowserView
 from Products.Five.browser.pagetemplatefile import ViewPageTemplateFile
 from bika.lims import EditSample
@@ -22,6 +21,7 @@ from bika.lims.utils import getUsers
 from bika.lims.utils import isActive
 from bika.lims.utils import to_utf8, getHiddenAttributesForClass
 from operator import itemgetter
+from bika.lims.workflow import doActionFor
 from plone.app.layout.globals.interfaces import IViewView
 from plone.registry.interfaces import IRegistry
 from zope.component import queryUtility
@@ -44,7 +44,7 @@ class SamplePartitionsView(BikaListingView):
         self.show_column_toggles = False
         self.show_select_row = False
         self.show_select_column = True
-        self.pagesize = 1000
+        self.pagesize = 0
         self.form_id = "partitions"
 
         self.columns = {
@@ -195,11 +195,11 @@ class SamplePartitionsView(BikaListingView):
                 preserver and self.user_fullname(preserver) or ''
             datepreserved = part.getDatePreserved()
             item['getDatePreserved'] = \
-                datepreserved and self.ulocalized_time(datepreserved) or ''
+                datepreserved and self.ulocalized_time(datepreserved, long_format=False) or ''
 
             disposaldate = part.getDisposalDate()
             item['getDisposalDate'] = \
-                disposaldate and self.ulocalized_time(disposaldate) or ''
+                disposaldate and self.ulocalized_time(disposaldate, long_format=False) or ''
 
             # inline edits for Container and Preservation
             if self.allow_edit:
@@ -328,14 +328,9 @@ class SampleEdit(BrowserView):
         return default_spec
 
     def __call__(self):
-        form = self.request.form
-        bc = getToolByName(self.context, 'bika_catalog')
-        bsc = getToolByName(self.context, 'bika_setup_catalog')
-        checkPermission = self.context.portal_membership.checkPermission
-        getAuthenticatedMember = self.context.portal_membership.getAuthenticatedMember
-        workflow = getToolByName(self.context, 'portal_workflow')
-        ars = self.context.getAnalysisRequests()
-        sample = self.context
+
+        if 'transition' in self.request.form:
+            doActionFor(self.context, self.request.form['transition'])
 
         ## render header table
         self.header_table = HeaderTableView(self.context, self.request)
@@ -458,11 +453,11 @@ class SamplesView(BikaListingView):
                                 'toggle': True},
             'getDateSampled': {'title': _('Date Sampled'),
                                'index':'getDateSampled',
-                               'toggle': not SamplingWorkflowEnabled,
+                               'toggle': SamplingWorkflowEnabled,
                                'input_class': 'datepicker_nofuture',
                                'input_width': '10'},
             'getSampler': {'title': _('Sampler'),
-                           'toggle': not SamplingWorkflowEnabled},
+                           'toggle': SamplingWorkflowEnabled},
             'getDatePreserved': {'title': _('Date Preserved'),
                                  'toggle': user_is_preserver,
                                  'input_class': 'datepicker_nofuture',
@@ -471,6 +466,8 @@ class SamplesView(BikaListingView):
                              'toggle': user_is_preserver},
             'DateReceived': {'title': _('Date Received'),
                              'index': 'getDateReceived',
+                             'toggle': False},
+            'SampleMatrix': {'title': _("Sample Matrix"),
                              'toggle': False},
             'state_title': {'title': _('State'),
                             'index':'review_state'},
@@ -485,6 +482,7 @@ class SamplesView(BikaListingView):
                          'Creator',
                          'Created',
                          'Requests',
+                         'SampleMatrix',
                          'getClientReference',
                          'getClientSampleID',
                          'getSampleTypeTitle',
@@ -511,6 +509,7 @@ class SamplesView(BikaListingView):
                          'Creator',
                          'Created',
                          'Requests',
+                         'SampleMatrix',
                          'getClientReference',
                          'getClientSampleID',
                          'getSamplingDate',
@@ -534,6 +533,7 @@ class SamplesView(BikaListingView):
                          'Creator',
                          'Created',
                          'Requests',
+                         'SampleMatrix',
                          'getClientReference',
                          'getClientSampleID',
                          'getSampleTypeTitle',
@@ -557,6 +557,7 @@ class SamplesView(BikaListingView):
                          'Creator',
                          'Created',
                          'Requests',
+                         'SampleMatrix',
                          'getClientReference',
                          'getClientSampleID',
                          'getSampleTypeTitle',
@@ -580,6 +581,7 @@ class SamplesView(BikaListingView):
                          'Creator',
                          'Created',
                          'Requests',
+                         'SampleMatrix',
                          'getClientReference',
                          'getClientSampleID',
                          'getSampleTypeTitle',
@@ -604,6 +606,7 @@ class SamplesView(BikaListingView):
                          'Creator',
                          'Created',
                          'Requests',
+                         'SampleMatrix',
                          'getClientReference',
                          'getClientSampleID',
                          'getSampleTypeTitle',
@@ -655,12 +658,38 @@ class SamplesView(BikaListingView):
             items[x]['getStorageLocation'] = obj.getStorageLocation() and obj.getStorageLocation().Title() or ''
             items[x]['AdHoc'] = obj.getAdHoc() and True or ''
 
+            items[x]['Created'] = self.ulocalized_time(obj.created())
+
             samplingdate = obj.getSamplingDate()
+            items[x]['getSamplingDate'] = self.ulocalized_time(samplingdate, long_format=1)
+
+            matrix = obj.getSampleMatrix()
+            if matrix:
+                items[x]['SampleMatrix'] = matrix.getSampleMatrix()
+                items[x]['replace']['SampleMatrix'] = "<a href='%s'>%s</a>" % \
+                     (matrix.absolute_url(), items[x]['SampleMatrix'])
+            else:
+                items[x]['SampleMatrix'] = ''
+
+            after_icons = ''
+            if obj.getSampleType().getHazardous():
+                after_icons += "<img title='%s' " \
+                    "src='%s/++resource++bika.lims.images/hazardous.png'>" % \
+                    (t(_("Hazardous")),
+                     self.portal_url)
+            if obj.getSamplingDate() > DateTime():
+                after_icons += "<img title='%s' " \
+                    "src='%s/++resource++bika.lims.images/calendar.png' >" % \
+                    (t(_("Future dated sample")),
+                     self.portal_url)
+            if after_icons:
+                items[x]['after']['getSampleID'] = after_icons
 
             SamplingWorkflowEnabled =\
                 self.context.bika_setup.getSamplingWorkflowEnabled()
 
-            if not samplingdate > DateTime() and SamplingWorkflowEnabled:
+            if not samplingdate > DateTime() \
+                    and SamplingWorkflowEnabled:
                 datesampled = self.ulocalized_time(obj.getDateSampled())
                 if not datesampled:
                     datesampled = self.ulocalized_time(DateTime())
@@ -677,29 +706,12 @@ class SamplesView(BikaListingView):
             items[x]['getDateSampled'] = datesampled
             items[x]['getSampler'] = sampler
 
-            items[x]['Created'] = self.ulocalized_time(obj.created())
-
-            samplingdate = obj.getSamplingDate()
-            items[x]['getSamplingDate'] = self.ulocalized_time(samplingdate, long_format=1)
-
-            after_icons = ''
-            if obj.getSampleType().getHazardous():
-                after_icons += "<img title='%s' " \
-                    "src='%s/++resource++bika.lims.images/hazardous.png'>" % \
-                    (t(_("Hazardous")),
-                     self.portal_url)
-            if obj.getSamplingDate() > DateTime():
-                after_icons += "<img title='%s' " \
-                    "src='%s/++resource++bika.lims.images/calendar.png' >" % \
-                    (t(_("Future dated sample")),
-                     self.portal_url)
-            if after_icons:
-                items[x]['after']['getSampleID'] = after_icons
-
             # sampling workflow - inline edits for Sampler and Date Sampled
             checkPermission = self.context.portal_membership.checkPermission
-            if checkPermission(SampleSample, obj) \
-                and not samplingdate > DateTime():
+            state = workflow.getInfoFor(obj, 'review_state')
+            if state == 'to_be_sampled' \
+                    and checkPermission(SampleSample, obj) \
+                    and not samplingdate > DateTime():
                 items[x]['required'] = ['getSampler', 'getDateSampled']
                 items[x]['allow_edit'] = ['getSampler', 'getDateSampled']
                 samplers = getUsers(obj, ['Sampler', 'LabManager', 'Manager'])
@@ -812,100 +824,3 @@ class ajaxGetSampleTypeInfo(BrowserView):
                }
 
         return json.dumps(ret)
-
-
-class WidgetVisibility(_WV):
-    """The values returned here do not decide the field order, only their
-    visibility.  The field order is set in the schema.
-    """
-    def __call__(self):
-        ret = super(WidgetVisibility, self).__call__()
-
-        workflow = getToolByName(self.context, 'portal_workflow')
-        state = workflow.getInfoFor(self.context, 'review_state')
-
-        # header_table default visible fields
-        ret['header_table'] = {
-            'prominent': [],
-            'visible': [
-                'SamplingDate',
-                'SampleType',
-                'SamplePoint',
-                'StorageLocation',
-                'ClientReference',
-                'ClientSampleID',
-                'SamplingDeviation',
-                'SampleCondition',
-                'DateSampled',
-                'DateReceived',
-                'AdHoc',
-                'Composite']}
-
-        # Edit and View widgets are displayed/hidden in different workflow
-        # states.  The widget.visible is used as a default.  This is placed
-        # here to manage the header_table display.
-        if state in ('to_be_sampled', 'to_be_preserved', 'sample_due', ):
-            ret['header_table']['visible'].remove('DateReceived')
-            ret['edit']['visible'] = [
-                'AdHoc',
-                'ClientReference',
-                'ClientSampleID',
-                'Composite',
-                'SampleCondition',
-                'SamplePoint',
-                'StorageLocation',
-                'SampleType',
-                'SamplingDate',
-                'SamplingDeviation',
-            ]
-            ret['view']['visible'] = [
-                'DateSampled',
-            ]
-        elif state in ('sample_received', ):
-            ret['edit']['visible'] = [
-                'AdHoc',
-                'ClientReference',
-                'ClientSampleID',
-            ]
-            ret['view']['visible'] = [
-                'Composite',
-                'DateReceived',
-                'SampleCondition',
-                'SamplePoint',
-                'StorageLocation',
-                'SampleType',
-                'SamplingDate',
-                'SamplingDeviation',
-            ]
-        elif state in ('to_be_verified', 'verified', ):
-            ret['edit']['visible'] = []
-            ret['view']['visible'] = [
-                'AdHoc',
-                'ClientReference',
-                'ClientSampleID',
-                'Composite',
-                'DateReceived',
-                'SampleCondition',
-                'SamplePoint',
-                'StorageLocation',
-                'SampleType',
-                'SamplingDate',
-                'SamplingDeviation',
-            ]
-        elif state in ('published', ):
-            ret['edit']['visible'] = []
-            ret['view']['visible'] = [
-                'AdHoc',
-                'ClientReference',
-                'ClientSampleID',
-                'Composite',
-                'DateReceived',
-                'SampleCondition',
-                'SamplePoint',
-                'StorageLocation',
-                'SampleType',
-                'SamplingDate',
-                'SamplingDeviation',
-            ]
-
-        return ret

@@ -16,10 +16,10 @@
       />
 
   <monkey:patch
-      description="This chops translated strings (from plone domain) into navtree titles."
-      class="plone.app.portlets.portlets.navigation.Renderer"
-      original="createNavTree"
-      replacement="bika.lims.monkey.navtree.createNavTree"
+      description="Fix pretty_title_or_id so that messages are translated.  It accepts a domain parameter, which defaults to 'plone'"
+      module="Products.CMFPlone.utils"
+      original="pretty_title_or_id"
+      replacement="bika.lims.monkey.utils.pretty_title_or_id"
       />
 
   <monkey:patch
@@ -34,6 +34,13 @@
       class="Products.CMFCore.MembershipTool.MembershipTool"
       original="getAuthenticatedMember"
       replacement="bika.lims.monkey.member.getAuthenticatedMember"
+      />
+
+  <monkey:patch
+      description="Modify isVisible to include more specific widget visibility rules"
+      class="Products.Archetypes.Widget.TypesWidget"
+      original="isVisible"
+      replacement=".Widget.isVisible"
       />
 
 </configure>

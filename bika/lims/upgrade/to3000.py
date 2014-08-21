@@ -74,7 +74,7 @@ def upgrade(tool):
     bc.addIndex('getSampleTypeTitle', 'KeywordIndex')
     bc.addIndex('getSamplePointTitle', 'KeywordIndex')
     
-    if 'getClientSampleID' in pc.indexes():
+    if 'getClientSampleID' not in pc.indexes():
         pc.addIndex('getClientSampleID', 'FieldIndex')
         pc.addColumn('getClientSampleID')
     if 'getParentUID' not in pc.indexes():
@@ -129,7 +129,11 @@ def upgrade(tool):
                 refsampleid = wsgroup[0].aq_parent.id
             else:
                 # Duplicate
-                refsampleid = wsgroup[0].getSamplePartition().id
+                _analysis = wsgroup[0].getAnalysis()
+                if _analysis.portal_type == 'ReferenceAnalysis':
+                    refsampleid = _analysis.aq_parent.id
+                else:
+                    refsampleid = wsgroup[0].getSamplePartition().id
             codre = refsampleid
             codws = '%s_%s' % (refsampleid, ws.UID())
             codgr = '%s_%s_%s' % (refsampleid, ws.UID(), position)
@@ -163,11 +167,14 @@ def upgrade(tool):
 
     logger.info("Updating workflow role/permission mappings")
     wf.updateRoleMappings()
-    logger.info("Rebuilding portal_catalog")
-    pc.clearFindAndRebuild()
-    logger.info("Rebuilding bika_analysis_catalog")
-    bac.clearFindAndRebuild()
-    logger.info("Rebuilding bika_catalog")
-    bc.clearFindAndRebuild()
+
+    logger.info("Reindex added indexes in portal_catalog")
+    pc.manage_reindexIndex(ids=['getClientSampleID', 'getParentUID',])
+
+    logger.info("Reindex added indexes in bika_analysis_catalog")
+    bac.manage_reindexIndex(ids=['getReferenceAnalysesGroupID',])
+
+    logger.info("Reindex added indexes in bika_catalog")
+    bc.manage_reindexIndex(ids=['getSampleTypeTitle', 'getSamplePointTitle',])
 
     return True

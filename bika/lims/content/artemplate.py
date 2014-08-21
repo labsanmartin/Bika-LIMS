@@ -211,4 +211,7 @@ class ARTemplate(BaseContent):
         items = [['','']] + list(items)
         return DisplayList(items)
 
+    def getClientUID(self):
+        return self.aq_parent.UID();
+
 registerType(ARTemplate, PROJECTNAME)

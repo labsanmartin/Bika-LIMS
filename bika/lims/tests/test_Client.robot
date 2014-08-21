@@ -1,6 +1,6 @@
 *** Settings ***
 
-Library          Selenium2Library  timeout=5  implicit_wait=0.2
+Library          Selenium2Library  timeout=10  implicit_wait=0.5
 Library          String
 Resource         keywords.txt
 Library          bika.lims.testing.Keywords
@@ -9,11 +9,28 @@ Resource         plone/app/robotframework/saucelabs.robot
 Variables        plone/app/testing/interfaces.py
 Variables        bika/lims/tests/variables.py
 Suite Setup      Start browser
-#Suite Teardown   Close All Browsers
+Suite Teardown   Close All Browsers
 
 *** Variables ***
 
 *** Test Cases ***
+
+Client DefaultCategories and RestrictedCategories
+    Log in                      test_labmanager1   test_labmanager1
+    Go to                       ${PLONEURL}/clients/client-1/base_edit
+    Click element               css=#fieldsetlegend-preferences
+    Select from list            DefaultCategories:list                Metals
+    Select from list            RestrictedCategories:list             Metals   Microbiology
+    Click button                Save
+    wait until page contains    saved.
+    Log out
+    Log in                      ritamo      ritamo
+    Go to                       ${PLONEURL}/clients/client-1
+    Wait until page contains    Happy
+    Click Link                  Add
+    Wait until page contains    Calcium
+    Page should not contain     Water Chemistry
+
 
 Create Client
     Log in   test_labmanager1   test_labmanager1
@@ -111,7 +128,6 @@ Client contact should not be able to see or access other clients
     Log in          ritamo   ritamo
     Go to           ${PLONEURL}/clients/client-2
     Page should contain   Insufficient Privileges
-
 
 *** Keywords ***
 

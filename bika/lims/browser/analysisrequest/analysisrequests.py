@@ -9,10 +9,14 @@ from DateTime import DateTime
 from Products.Archetypes import PloneMessageFactory as PMF
 from plone.app.layout.globals.interfaces import IViewView
 from Products.CMFCore.utils import getToolByName
+from Products.Five.browser.pagetemplatefile import ViewPageTemplateFile
 from zope.interface import implements
 
 
 class AnalysisRequestsView(BikaListingView):
+    template = ViewPageTemplateFile(
+        "../analysisrequest/templates/analysisrequests.pt")
+    ar_add = ViewPageTemplateFile("../analysisrequest/templates/ar_add.pt")
     implements(IViewView)
 
     def __init__(self, context, request):
@@ -99,11 +103,11 @@ class AnalysisRequestsView(BikaListingView):
                              'toggle': True},
             'getDateSampled': {'title': _('Date Sampled'),
                                'index': 'getDateSampled',
-                               'toggle': not SamplingWorkflowEnabled,
+                               'toggle': SamplingWorkflowEnabled,
                                'input_class': 'datepicker_nofuture',
                                'input_width': '10'},
             'getSampler': {'title': _('Sampler'),
-                           'toggle': not SamplingWorkflowEnabled},
+                           'toggle': SamplingWorkflowEnabled},
             'getDatePreserved': {'title': _('Date Preserved'),
                                  'toggle': user_is_preserver,
                                  'input_class': 'datepicker_nofuture',
@@ -122,9 +126,15 @@ class AnalysisRequestsView(BikaListingView):
             'getProfileTitle': {'title': _('Profile'),
                                 'index': 'getProfileTitle',
                                 'toggle': False},
+            'getAnalysesNum': {'title': _('Number of Analyses'),
+                               'index': 'getAnalysesNum',
+                               'sortable': True,
+                               'toggle': False},
             'getTemplateTitle': {'title': _('Template'),
                                  'index': 'getTemplateTitle',
                                  'toggle': False},
+            'SampleMatrix': {'title': _('Sample Matrix'),
+                             'toggle': False,},
         }
         self.review_states = [
             {'id': 'default',
@@ -142,9 +152,7 @@ class AnalysisRequestsView(BikaListingView):
                              {'id': 'republish'},
                              {'id': 'cancel'},
                              {'id': 'reinstate'}],
-             'custom_actions': [{'id': 'copy_to_new',
-                                'title': _('Copy to new'),
-                                'url': 'workflow_action?action=copy_to_new'}, ],
+             'custom_actions': [],
              'columns': ['getRequestID',
                         'getSample',
                         'BatchID',
@@ -152,6 +160,7 @@ class AnalysisRequestsView(BikaListingView):
                         'Client',
                         'Creator',
                         'Created',
+                        'SampleMatrix',
                         'getClientOrderNumber',
                         'getClientReference',
                         'ClientContact',
@@ -170,6 +179,7 @@ class AnalysisRequestsView(BikaListingView):
                         'getDatePreserved',
                         'getPreserver',
                         'getDateReceived',
+                        'getAnalysesNum',
                         'state_title']},
             {'id': 'sample_due',
              'title': _('Due'),
@@ -183,9 +193,7 @@ class AnalysisRequestsView(BikaListingView):
                              {'id': 'receive'},
                              {'id': 'cancel'},
                              {'id': 'reinstate'}],
-             'custom_actions': [{'id': 'copy_to_new',
-                                'title': _('Copy to new'),
-                                'url': 'workflow_action?action=copy_to_new'}, ],
+             'custom_actions': [],
              'columns': ['getRequestID',
                         'getSample',
                         'BatchID',
@@ -195,6 +203,7 @@ class AnalysisRequestsView(BikaListingView):
                         'getTemplateTitle',
                         'Creator',
                         'Created',
+                        'SampleMatrix',
                         'getClientOrderNumber',
                         'getClientReference',
                         'getClientSampleID',
@@ -209,6 +218,7 @@ class AnalysisRequestsView(BikaListingView):
                         'SamplingDeviation',
                         'Priority',
                         'AdHoc',
+                        'getAnalysesNum',
                         'state_title']},
            {'id': 'sample_received',
              'title': _('Received'),
@@ -218,9 +228,7 @@ class AnalysisRequestsView(BikaListingView):
              'transitions': [{'id': 'prepublish'},
                              {'id': 'cancel'},
                              {'id': 'reinstate'}],
-             'custom_actions': [{'id': 'copy_to_new',
-                                'title': _('Copy to new'),
-                                'url': 'workflow_action?action=copy_to_new'}, ],
+             'custom_actions': [],
              'columns': ['getRequestID',
                         'getSample',
                         'BatchID',
@@ -230,6 +238,7 @@ class AnalysisRequestsView(BikaListingView):
                         'getTemplateTitle',
                         'Creator',
                         'Created',
+                        'SampleMatrix',
                         'getClientOrderNumber',
                         'getClientReference',
                         'getClientSampleID',
@@ -244,6 +253,7 @@ class AnalysisRequestsView(BikaListingView):
                         'getSampler',
                         'getDatePreserved',
                         'getPreserver',
+                        'getAnalysesNum',
                         'getDateReceived']},
             {'id': 'to_be_verified',
              'title': _('To be verified'),
@@ -255,9 +265,7 @@ class AnalysisRequestsView(BikaListingView):
                              {'id': 'prepublish'},
                              {'id': 'cancel'},
                              {'id': 'reinstate'}],
-             'custom_actions': [{'id': 'copy_to_new',
-                                'title': _('Copy to new'),
-                                'url': 'workflow_action?action=copy_to_new'}, ],
+             'custom_actions': [],
              'columns': ['getRequestID',
                         'getSample',
                         'BatchID',
@@ -267,6 +275,7 @@ class AnalysisRequestsView(BikaListingView):
                         'getTemplateTitle',
                         'Creator',
                         'Created',
+                        'SampleMatrix',
                         'getClientOrderNumber',
                         'getClientReference',
                         'getClientSampleID',
@@ -281,6 +290,7 @@ class AnalysisRequestsView(BikaListingView):
                         'getSampler',
                         'getDatePreserved',
                         'getPreserver',
+                        'getAnalysesNum',
                         'getDateReceived']},
             {'id': 'verified',
              'title': _('Verified'),
@@ -288,9 +298,7 @@ class AnalysisRequestsView(BikaListingView):
                                'sort_on': 'created',
                                'sort_order': 'reverse'},
              'transitions': [{'id': 'publish'}],
-             'custom_actions': [{'id': 'copy_to_new',
-                                'title': _('Copy to new'),
-                                'url': 'workflow_action?action=copy_to_new'}, ],
+             'custom_actions': [],
              'columns': ['getRequestID',
                         'getSample',
                         'BatchID',
@@ -300,6 +308,7 @@ class AnalysisRequestsView(BikaListingView):
                         'getTemplateTitle',
                         'Creator',
                         'Created',
+                        'SampleMatrix',
                         'getClientOrderNumber',
                         'getClientReference',
                         'getClientSampleID',
@@ -314,6 +323,7 @@ class AnalysisRequestsView(BikaListingView):
                         'getSampler',
                         'getDatePreserved',
                         'getPreserver',
+                        'getAnalysesNum',
                         'getDateReceived']},
             {'id': 'published',
              'title': _('Published'),
@@ -321,9 +331,7 @@ class AnalysisRequestsView(BikaListingView):
                                'sort_on': 'created',
                                'sort_order': 'reverse'},
              'transitions': [{'id': 'republish'}],
-             'custom_actions': [{'id': 'copy_to_new',
-                                'title': _('Copy to new'),
-                                'url': 'workflow_action?action=copy_to_new'}, ],
+             'custom_actions': [],
              'columns': ['getRequestID',
                         'getSample',
                         'BatchID',
@@ -333,6 +341,7 @@ class AnalysisRequestsView(BikaListingView):
                         'getTemplateTitle',
                         'Creator',
                         'Created',
+                        'SampleMatrix',
                         'getClientOrderNumber',
                         'getClientReference',
                         'getClientSampleID',
@@ -348,6 +357,7 @@ class AnalysisRequestsView(BikaListingView):
                         'getDatePreserved',
                         'getPreserver',
                         'getDateReceived',
+                        'getAnalysesNum',
                         'getDatePublished']},
             {'id': 'cancelled',
              'title': _('Cancelled'),
@@ -359,9 +369,7 @@ class AnalysisRequestsView(BikaListingView):
                                'sort_on': 'created',
                                'sort_order': 'reverse'},
              'transitions': [{'id': 'reinstate'}],
-             'custom_actions': [{'id': 'copy_to_new',
-                                'title': _('Copy to new'),
-                                'url': 'workflow_action?action=copy_to_new'}, ],
+             'custom_actions': [],
              'columns': ['getRequestID',
                         'getSample',
                         'BatchID',
@@ -371,6 +379,7 @@ class AnalysisRequestsView(BikaListingView):
                         'getTemplateTitle',
                         'Creator',
                         'Created',
+                        'SampleMatrix',
                         'getClientOrderNumber',
                         'getClientReference',
                         'getClientSampleID',
@@ -387,6 +396,7 @@ class AnalysisRequestsView(BikaListingView):
                         'getPreserver',
                         'getDateReceived',
                         'getDatePublished',
+                        'getAnalysesNum',
                         'state_title']},
             {'id': 'invalid',
              'title': _('Invalid'),
@@ -394,9 +404,7 @@ class AnalysisRequestsView(BikaListingView):
                                'sort_on': 'created',
                                'sort_order': 'reverse'},
              'transitions': [],
-             'custom_actions': [{'id': 'copy_to_new',
-                                'title': _('Copy to new'),
-                                'url': 'workflow_action?action=copy_to_new'}, ],
+             'custom_actions': [],
              'columns':['getRequestID',
                         'getSample',
                         'BatchID',
@@ -406,6 +414,7 @@ class AnalysisRequestsView(BikaListingView):
                         'getTemplateTitle',
                         'Creator',
                         'Created',
+                        'SampleMatrix',
                         'getClientOrderNumber',
                         'getClientReference',
                         'getClientSampleID',
@@ -421,6 +430,7 @@ class AnalysisRequestsView(BikaListingView):
                         'getDatePreserved',
                         'getPreserver',
                         'getDateReceived',
+                        'getAnalysesNum',
                         'getDatePublished']},
             {'id': 'assigned',
              'title': "<img title='%s'\
@@ -439,9 +449,7 @@ class AnalysisRequestsView(BikaListingView):
                              {'id': 'republish'},
                              {'id': 'cancel'},
                              {'id': 'reinstate'}],
-             'custom_actions': [{'id': 'copy_to_new',
-                                'title': _('Copy to new'),
-                                'url': 'workflow_action?action=copy_to_new'}, ],
+             'custom_actions': [],
              'columns': ['getRequestID',
                         'getSample',
                         'BatchID',
@@ -451,6 +459,7 @@ class AnalysisRequestsView(BikaListingView):
                         'getTemplateTitle',
                         'Creator',
                         'Created',
+                        'SampleMatrix',
                         'getClientOrderNumber',
                         'getClientReference',
                         'getClientSampleID',
@@ -466,6 +475,7 @@ class AnalysisRequestsView(BikaListingView):
                         'getDatePreserved',
                         'getPreserver',
                         'getDateReceived',
+                        'getAnalysesNum',
                         'state_title']},
             {'id': 'unassigned',
              'title': "<img title='%s'\
@@ -485,9 +495,7 @@ class AnalysisRequestsView(BikaListingView):
                              {'id': 'republish'},
                              {'id': 'cancel'},
                              {'id': 'reinstate'}],
-             'custom_actions': [{'id': 'copy_to_new',
-                                'title': _('Copy to new'),
-                                'url': 'workflow_action?action=copy_to_new'}, ],
+             'custom_actions': [],
              'columns': ['getRequestID',
                         'getSample',
                         'BatchID',
@@ -497,6 +505,7 @@ class AnalysisRequestsView(BikaListingView):
                         'getTemplateTitle',
                         'Creator',
                         'Created',
+                        'SampleMatrix',
                         'getClientOrderNumber',
                         'getClientReference',
                         'getClientSampleID',
@@ -513,6 +522,7 @@ class AnalysisRequestsView(BikaListingView):
                         'getDatePreserved',
                         'getPreserver',
                         'getDateReceived',
+                        'getAnalysesNum',
                         'state_title']},
             ]
 
@@ -550,6 +560,11 @@ class AnalysisRequestsView(BikaListingView):
             items[x]['replace']['getSample'] = \
                 "<a href='%s'>%s</a>" % (sample.absolute_url(), sample.Title())
 
+            if obj.getAnalysesNum():
+                items[x]['getAnalysesNum'] = str(obj.getAnalysesNum()[0]) + '/' + str(obj.getAnalysesNum()[1])
+            else:
+                items[x]['getAnalysesNum'] = ''
+
             batch = obj.getBatch()
             if batch:
                 items[x]['BatchID'] = batch.getBatchID()
@@ -557,6 +572,14 @@ class AnalysisRequestsView(BikaListingView):
                      (batch.absolute_url(), items[x]['BatchID'])
             else:
                 items[x]['BatchID'] = ''
+
+            matrix = obj.getSampleMatrix()
+            if matrix:
+                items[x]['SampleMatrix'] = matrix.getSampleMatrix()
+                items[x]['replace']['SampleMatrix'] = "<a href='%s'>%s</a>" % \
+                     (matrix.absolute_url(), items[x]['SampleMatrix'])
+            else:
+                items[x]['SampleMatrix'] = ''
 
             val = obj.Schema().getField('SubGroup').get(obj)
             items[x]['SubGroup'] = val.Title() if val else ''
@@ -599,12 +622,17 @@ class AnalysisRequestsView(BikaListingView):
 
             items[x]['Created'] = self.ulocalized_time(obj.created())
 
-            SamplingWorkflowEnabled =\
-                self.context.bika_setup.getSamplingWorkflowEnabled()
+            contact = obj.getContact()
+            if contact:
+                items[x]['ClientContact'] = contact.Title()
+                items[x]['replace']['ClientContact'] = "<a href='%s'>%s</a>" % \
+                    (contact.absolute_url(), contact.Title())
+            else:
+                items[x]['ClientContact'] = ""
 
-            if not samplingdate > DateTime() and SamplingWorkflowEnabled:
+            SamplingWorkflowEnabled = sample.getSamplingWorkflowEnabled()
+            if SamplingWorkflowEnabled and not samplingdate > DateTime():
                 datesampled = self.ulocalized_time(sample.getDateSampled())
-
                 if not datesampled:
                     datesampled = self.ulocalized_time(
                         DateTime(),
@@ -622,18 +650,12 @@ class AnalysisRequestsView(BikaListingView):
             items[x]['getDateSampled'] = datesampled
             items[x]['getSampler'] = sampler
 
-            contact = obj.getContact()
-            if contact:
-                items[x]['ClientContact'] = contact.Title()
-                items[x]['replace']['ClientContact'] = "<a href='%s'>%s</a>" % \
-                    (contact.absolute_url(), contact.Title())
-            else:
-                items[x]['ClientContact'] = ""
-
             # sampling workflow - inline edits for Sampler and Date Sampled
             checkPermission = self.context.portal_membership.checkPermission
-            if checkPermission(SampleSample, obj) \
-                and not samplingdate > DateTime():
+            state = workflow.getInfoFor(obj, 'review_state')
+            if state == 'to_be_sampled' \
+                    and checkPermission(SampleSample, obj) \
+                    and not samplingdate > DateTime():
                 items[x]['required'] = ['getSampler', 'getDateSampled']
                 items[x]['allow_edit'] = ['getSampler', 'getDateSampled']
                 samplers = getUsers(sample, ['Sampler', 'LabManager', 'Manager'])
@@ -687,6 +709,8 @@ class AnalysisRequestsView(BikaListingView):
                 except Exception:
                     pass
 
+        # Hide Preservation/Sampling workflow actions if the edit columns
+        # are not displayed.
         toggle_cols = self.get_toggle_cols()
         new_states = []
         for i, state in enumerate(self.review_states):

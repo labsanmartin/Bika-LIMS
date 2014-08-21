@@ -3,6 +3,7 @@
 from AccessControl import getSecurityManager
 from AccessControl import ClassSecurityInfo
 from DateTime import DateTime
+from bika.lims.utils.analysis import format_numeric_result
 from plone.indexer import indexer
 from Products.ATContentTypes.content import schemata
 from Products.ATExtensions.ateapi import DateTimeField, DateTimeWidget, RecordsField
@@ -26,8 +27,9 @@ from bika.lims.browser.widgets import DurationWidget
 from bika.lims.browser.widgets import RecordsWidget as BikaRecordsWidget
 from bika.lims.config import PROJECTNAME
 from bika.lims.content.bikaschema import BikaSchema
-from bika.lims.interfaces import IAnalysis
-from bika.lims.utils import changeWorkflowState
+from bika.lims.interfaces import IAnalysis, IDuplicateAnalysis, IReferenceAnalysis
+from bika.lims.interfaces import IReferenceSample
+from bika.lims.utils import changeWorkflowState, formatDecimalMark
 from bika.lims.workflow import skip
 from bika.lims.workflow import doActionFor
 from decimal import Decimal
@@ -230,6 +232,11 @@ class Analysis(BaseContent):
                 duetime = ''
             self.setDueDate(duetime)
 
+    def getReviewState(self):
+        """ Return the current analysis' state"""
+        workflow = getToolByName(self, "portal_workflow")
+        return workflow.getInfoFor(self, "review_state")
+
     def getUncertainty(self, result=None):
         """ Calls self.Service.getUncertainty with either the provided
             result value or self.Result
@@ -275,6 +282,12 @@ class Analysis(BaseContent):
         self.getField('Result').set(self, value, **kw)
 
     def getSample(self):
+        # ReferenceSample cannot provide a 'getSample'
+        if IReferenceAnalysis.providedBy(self):
+            return None
+        if IDuplicateAnalysis.providedBy(self) \
+                or self.portal_type == 'RejectAnalysis':
+            return self.getAnalysis().aq_parent.getSample()
         return self.aq_parent.getSample()
 
     def getAnalysisSpecs(self, specification=None):
@@ -284,7 +297,13 @@ class Analysis(BaseContent):
             lab specification.
             If no specification available for this analysis, returns None
         """
-        sampletype = self.getSample().getSampleType()
+        sample = self.getSample()
+
+        # No specifications available for ReferenceSamples
+        if IReferenceSample.providedBy(sample):
+            return None
+
+        sampletype = sample.getSampleType()
         sampletype_uid = sampletype and sampletype.UID() or ''
         bsc = getToolByName(self, 'bika_setup_catalog')
 
@@ -381,7 +400,7 @@ class Analysis(BaseContent):
                     return False
 
         # Calculate
-        formula = calculation.getFormula()
+        formula = calculation.getMinifiedFormula()
         formula = formula.replace('[', '%(').replace(']', ')f')
         try:
             formula = eval("'%s'%%mapping" % formula,
@@ -400,10 +419,6 @@ class Analysis(BaseContent):
             self.setResult("NA")
             return True
 
-        precision = service.getPrecision()
-        result = (precision and result) \
-            and str("%%.%sf" % precision) % result \
-            or result
         self.setResult(result)
         return True
 
@@ -574,19 +589,25 @@ class Analysis(BaseContent):
             if self.getInstrument else self.getDefaultInstrument()
         return instr.getMethod() if instr else None
 
-    def getFormattedResult(self):
+    def getFormattedResult(self, specs=None, decimalmark='.'):
         """Formatted result:
         1. Print ResultText of matching ResultOptions
         2. If the result is not floatable, return it without being formatted
         3. If the analysis specs has hidemin or hidemax enabled and the
            result is out of range, render result as '<min' or '>max'
-        4. If the result is floatable, render it to the correct precision
+        4. Otherwise, render numerical value
+        specs param is optional. A dictionary as follows:
+            {'min': <min_val>,
+             'max': <max_val>,
+             'error': <error>,
+             'hidemin': <hidemin_val>,
+             'hidemax': <hidemax_val>}
         """
         result = self.getResult()
         service = self.getService()
         choices = service.getResultOptions()
 
-        # 1. Print ResultText of mathching ResulOptions
+        # 1. Print ResultText of matching ResulOptions
         match = [x['ResultText'] for x in choices
                  if str(x['ResultValue']) == str(result)]
         if match:
@@ -602,9 +623,10 @@ class Analysis(BaseContent):
         #    result is out of range, render result as '<min' or '>max'
         belowmin = False
         abovemax = False
-        specs = self.getAnalysisSpecs()
-        specs = specs.getResultsRangeDict() if specs is not None else {}
-        specs = specs.get(self.getKeyword(), {})
+        if not specs:
+            specs = self.getAnalysisSpecs()
+            specs = specs.getResultsRangeDict() if specs is not None else {}
+            specs = specs.get(self.getKeyword(), {})
         hidemin = specs.get('hidemin', '')
         hidemax = specs.get('hidemax', '')
         try:
@@ -620,17 +642,14 @@ class Analysis(BaseContent):
 
         # 3.1. If result is below min and hidemin enabled, return '<min'
         if belowmin:
-            return '< %s' % hidemin
+            return formatDecimalMark('< %s' % hidemin, decimalmark)
 
         # 3.2. If result is above max and hidemax enabled, return '>max'
         if abovemax:
-            return '> %s' % hidemax
+            return formatDecimalMark('> %s' % hidemax, decimalmark)
 
-        # 4. If the result is floatable, render it to the correct precision
-        precision = service.getPrecision()
-        if not precision:
-            precision = ''
-        return str("%%.%sf" % precision) % result
+        # Render numerical value
+        return formatDecimalMark(format_numeric_result(self, result), decimalmark)
 
     def getAnalyst(self):
         """ Returns the identifier of the assigned analyst. If there is
@@ -872,7 +891,10 @@ class Analysis(BaseContent):
         analyses = [x for x in parent.objectValues("Analysis")
                     if x.getId().startswith(self.id)]
         kw = self.getKeyword()
+        # LIMS-1290 - Analyst must be able to retract, which creates a new Analysis.
+        parent._verifyObjectPaste = str   # I cancel the permission check with this.
         parent.manage_renameObject(kw, "{0}-{1}".format(kw, len(analyses)))
+        delattr(parent, '_verifyObjectPaste')
         # Create new analysis and copy values from retracted
         analysis = _createObjectByType("Analysis", parent, kw)
         analysis.edit(
@@ -890,6 +912,10 @@ class Analysis(BaseContent):
             Instrument=self.getInstrument(),
             SamplePartition=self.getSamplePartition())
         analysis.unmarkCreationFlag()
+
+        # We must bring the specification across manually.
+        analysis.specification = self.specification
+
         # zope.event.notify(ObjectInitializedEvent(analysis))
         changeWorkflowState(analysis,
                             "bika_analysis_workflow", "sample_received")
@@ -929,7 +955,10 @@ class Analysis(BaseContent):
                 else:
                     if not "retract all analyses" in self.REQUEST['workflow_skiplist']:
                         self.REQUEST["workflow_skiplist"].append("retract all analyses")
-                    workflow.doActionFor(ws, "retract")
+                    try:
+                        workflow.doActionFor(ws, "retract")
+                    except WorkflowException:
+                        pass
             # Add to worksheet Analyses
             analyses = list(ws.getAnalyses())
             analyses += [analysis, ]

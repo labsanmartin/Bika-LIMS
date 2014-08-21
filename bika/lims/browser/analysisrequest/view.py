@@ -6,20 +6,17 @@ from bika.lims.browser.analyses import AnalysesView
 from bika.lims.browser.analyses import QCAnalysesView
 from bika.lims.browser.header_table import HeaderTableView
 from bika.lims.browser.sample import SamplePartitionsView
-from bika.lims.content.analysisrequest import schema as AnalysisRequestSchema
 from bika.lims.config import POINTS_OF_CAPTURE
 from bika.lims.permissions import *
 from bika.lims.utils import isActive
 from bika.lims.utils import to_utf8
-from bika.lims.workflow import doActionFor
 from DateTime import DateTime
+from bika.lims.workflow import doActionFor
 from plone.app.layout.globals.interfaces import IViewView
-from Products.Archetypes import PloneMessageFactory as PMF
 from Products.CMFCore.utils import getToolByName
 from Products.Five.browser.pagetemplatefile import ViewPageTemplateFile
 from zope.interface import implements
 
-import plone
 
 class AnalysisRequestViewView(BrowserView):
 
@@ -39,6 +36,8 @@ class AnalysisRequestViewView(BrowserView):
     def __call__(self):
         ar = self.context
         workflow = getToolByName(self.context, 'portal_workflow')
+        if 'transition' in self.request.form:
+            doActionFor(self.context, self.request.form['transition'])
         # Contacts get expanded for view
         contact = self.context.getContact()
         contacts = []
@@ -60,7 +59,7 @@ class AnalysisRequestViewView(BrowserView):
             cc_emails.append(cc)
             cc_hrefs.append("<a href='mailto:%s'>%s</a>" % (cc, cc))
         # render header table
-        self.header_table = HeaderTableView(self.context, self.request)
+        self.header_table = HeaderTableView(self.context, self.request)()
         # Create Partitions View for this ARs sample
         p = SamplePartitionsView(self.context.getSample(), self.request)
         p.show_column_toggles = False
@@ -102,6 +101,19 @@ class AnalysisRequestViewView(BrowserView):
                                                   {'id': 'retract'},
                                                   {'id': 'verify'}]
         self.qctable = qcview.contents_table()
+        # If a general retracted is done, rise a waring
+        if workflow.getInfoFor(ar, 'review_state') == 'sample_received':
+            allstatus = list()
+            for analysis in ar.getAnalyses():
+                status = workflow.getInfoFor(analysis.getObject(), 'review_state')
+                if status not in ['retracted','to_be_verified','verified']:
+                    allstatus = []
+                    break
+                else:
+                    allstatus.append(status)
+            if len(allstatus) > 0:
+                self.addMessage("General Retract Done", 'warning')
+
         # If is a retracted AR, show the link to child AR and show a warn msg
         if workflow.getInfoFor(ar, 'review_state') == 'invalid':
             childar = hasattr(ar, 'getChildAnalysisRequest') \
@@ -122,7 +134,8 @@ class AnalysisRequestViewView(BrowserView):
             message = _('This Analysis Request has been '
                         'generated automatically due to '
                         'the retraction of the Analysis '
-                        'Request %s.') % par.getRequestID()
+                        'Request ${retracted_request_id}.',
+                        mapping={'retracted_request_id': par.getRequestID()})
             self.addMessage(message, 'info')
         self.renderMessages()
         return self.template()
@@ -245,8 +258,10 @@ class AnalysisRequestViewView(BrowserView):
         return res
 
     def getRestrictedCategories(self):
-        if self.context.portal_type == 'Client':
-            return self.context.getRestrictedCategories()
+        # we are in portal_factory AR context right now
+        parent = self.context.aq_parent
+        if hasattr(parent, "getRestrictedCategories"):
+            return parent.getRestrictedCategories()
         return []
 
     def Categories(self):
@@ -269,8 +284,10 @@ class AnalysisRequestViewView(BrowserView):
         return cats
 
     def getDefaultCategories(self):
-        if self.context.portal_type == 'Client':
-            return self.context.getDefaultCategories()
+        # we are in portal_factory AR context right now
+        parent = self.context.aq_parent
+        if hasattr(parent, "getDefaultCategories"):
+            return parent.getDefaultCategories()
         return []
 
     def DefaultCategories(self):

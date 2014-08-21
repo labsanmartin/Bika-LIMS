@@ -20,27 +20,39 @@ class AnalysisRequestsView(_ARV, _ARAV):
         super(AnalysisRequestsView, self).__init__(context, request)
 
     def contentsMethod(self, contentFilter):
-        bc = getToolByName(self.context, 'bika_catalog')
-        if 'BatchUID' not in contentFilter.keys():
-            contentFilter['BatchUID'] = self.context.UID()
-        return bc(contentFilter)
+        #bc = getToolByName(self.context, 'bika_catalog')
+        #import pdb;pdb.set_trace()
+        #if 'BatchUID' not in contentFilter.keys():
+        #    contentFilter['BatchUID'] = self.context.UID()
+        #return bc(contentFilter)
+        return self.context.getBackReferences("AnalysisRequestBatch")
 
     def __call__(self):
         self.context_actions = {}
         mtool = getToolByName(self.context, 'portal_membership')
         if mtool.checkPermission(AddAnalysisRequest, self.portal):
-            # Client contact required (if client is associated)
-            client = self.context.getClient()
-            if hasattr(client, 'getContacts') and client.getContacts():
-                self.context_actions[self.context.translate(_('Add new'))] = {
-                    'url': self.context.absolute_url() + \
-                        "/portal_factory/"
-                        "AnalysisRequest/Request new analyses/ar_add?col_count=1",
-                    'icon': '++resource++bika.lims.images/add.png'}
-            # else:
-                # addPortalMessage = self.context.plone_utils.addPortalMessage
-                # msg = _("Client contact required before request may be submitted")
-                # addPortalMessage(self.context.translate(msg))
+            layout = 'columns'
+            ar_count = '4'
+            self.context_actions[self.context.translate(_('Add new'))] = {
+                    'url': '%(context_url)s/portal_factory/AnalysisRequest/Request new analyses/ar_add?layout=%(layout)s&ar_count=%(ar_count)s' % {
+                            'context_url': self.context.absolute_url(),
+                            'layout': layout,
+                            'ar_count': ar_count,
+                            }, 
+                'icon': '++resource++bika.lims.images/add.png'}
+
+            # This is permitted from the global permission above, AddAnalysisRequest.
+            review_states = []
+            for review_state in self.review_states:
+                custom_actions = review_state.get('custom_actions', [])
+                custom_actions.extend([{'id': 'copy_to_new',
+                                        'title': _('Copy to new'),
+                                        'url': 'workflow_action?action=copy_to_new'},
+                                       ])
+                review_state['custom_actions'] = custom_actions
+                review_states.append(review_state)
+            self.review_states = review_states
+
         return super(AnalysisRequestsView, self).__call__()
 
     def getMemberDiscountApplies(self):

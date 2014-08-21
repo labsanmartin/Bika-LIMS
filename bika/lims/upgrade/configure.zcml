@@ -380,4 +380,104 @@
         handler="bika.lims.upgrade.to3037.upgrade"
         sortkey="1"
         profile="bika.lims:default"/>
+
+<genericsetup:upgradeStep
+        title="Fix Sample Workflow permissions"
+        description=""
+        source="3037"
+        destination="3038"
+        handler="bika.lims.upgrade.to3038.upgrade"
+        sortkey="1"
+        profile="bika.lims:default"/>
+
+<genericsetup:upgradeStep
+        title="LIMS-1275"
+        description="Fix bika_setup permissions"
+        source="3038"
+        destination="3039"
+        handler="bika.lims.upgrade.to3039.upgrade"
+        sortkey="1"
+        profile="bika.lims:default"/>
+
+<genericsetup:upgradeStep
+        title="LIMS-1059"
+        description="Worksheet rejection workflow"
+        source="3039"
+        destination="3040"
+        handler="bika.lims.upgrade.to3040.upgrade"
+        sortkey="1"
+        profile="bika.lims:default"/>
+
+<genericsetup:upgradeStep
+        title="LIMS-1310"
+        description="Filter Sample Points by client"
+        source="3040"
+        destination="3041"
+        handler="bika.lims.upgrade.to3041.upgrade"
+        sortkey="1"
+        profile="bika.lims:default"/>
+
+<genericsetup:upgradeStep
+        title="Add checkbox actions in ClientEditView"
+        description="JS actions to avoid client's decimal mark selection by a checkbox"
+        source="3041"
+        destination="3042"
+        handler="bika.lims.upgrade.to3042.upgrade"
+        sortkey="1"
+        profile="bika.lims:default"/>
+
+<genericsetup:upgradeStep
+        title="Graph-related javascripts grouping"
+        description="Remove js and css from templates"
+        source="3042"
+        destination="3043"
+        handler="bika.lims.upgrade.to3043.upgrade"
+        sortkey="1"
+        profile="bika.lims:default"/>
+
+<genericsetup:upgradeStep
+        title="JS structure and naming changes"
+        description=""
+        source="3043"
+        destination="3044"
+        handler="bika.lims.upgrade.to3044.upgrade"
+        sortkey="1"
+        profile="bika.lims:default"/>
+
+<genericsetup:upgradeStep
+        title="Fix workflow variable review_history permission guard"
+        description=""
+        source="3044"
+        destination="3045"
+        handler="bika.lims.upgrade.to3045.upgrade"
+        sortkey="1"
+        profile="bika.lims:default"/>
+
+<genericsetup:upgradeStep
+        title="Add missing bika.lims.sandbox.ar_analyses.js"
+        description=""
+        source="3045"
+        destination="3046"
+        handler="bika.lims.upgrade.to3046.upgrade"
+        sortkey="1"
+        profile="bika.lims:default"/>
+
+<genericsetup:upgradeStep
+        title="JS changes"
+        description=""
+        source="3046"
+        destination="3047"
+        handler="bika.lims.upgrade.to3047.upgrade"
+        sortkey="1"
+        profile="bika.lims:default"/>
+
+<genericsetup:upgradeStep
+        title="Bika LIMS javascripts refactoring"
+        description=""
+        source="3047"
+        destination="3048"
+        handler="bika.lims.upgrade.to3048.upgrade"
+        sortkey="1"
+        profile="bika.lims:default"/>
+
 </configure>

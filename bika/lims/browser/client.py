@@ -1,3 +1,4 @@
+from Products.CMFCore.permissions import ModifyPortalContent
 import plone, json
 import zope.event
 
@@ -7,13 +8,11 @@ from AccessControl import getSecurityManager
 from Acquisition import aq_parent, aq_inner
 from bika.lims import PMF, logger, bikaMessageFactory as _
 from bika.lims.adapters.referencewidgetvocabulary import DefaultReferenceWidgetVocabulary
-from bika.lims.adapters.widgetvisibility import WidgetVisibility as _WV
 from bika.lims.browser import BrowserView
 from bika.lims.browser.analysisrequest import AnalysisRequestsView
 from bika.lims.browser.analysisrequest import AnalysisRequestWorkflowAction
 from bika.lims.browser.batchfolder import BatchFolderContentsView
 from bika.lims.browser.bika_listing import BikaListingView
-from bika.lims.browser.publish import doPublish
 from bika.lims.browser.sample import SamplesView
 from bika.lims.browser.supplyorderfolder import SupplyOrderFolderView
 from bika.lims.idserver import renameAfterCreation
@@ -92,8 +91,6 @@ class ClientWorkflowAction(AnalysisRequestWorkflowAction):
                     ar = sample.aq_parent
                 # can't transition inactive items
                 if workflow.getInfoFor(sample, 'inactive_state', '') == 'inactive':
-                    continue
-                if not checkPermission(SampleSample, sample):
                     continue
 
                 # grab this object's Sampler and DateSampled from the form
@@ -222,36 +219,17 @@ class ClientWorkflowAction(AnalysisRequestWorkflowAction):
             # We pass a list of AR objects to Publish.
             # it returns a list of AR IDs which were actually published.
             objects = AnalysisRequestWorkflowAction._get_selected_items(self)
-            ARs_to_publish = []
-            transitioned = []
-            for obj_uid, obj in objects.items():
+            its = []
+            for uid, obj in objects.items():
                 if isActive(obj):
-                    obj.setDatePublished(DateTime())
-                    ARs_to_publish.append(obj)
-
-            transitioned = self.doPublish(self.context,
-                                   self.request,
-                                   action,
-                                   ARs_to_publish)()
-
-            if len(transitioned) > 1:
-                message = _('${items} were published.',
-                            mapping = {'items': ', '.join(transitioned)})
-            elif len(transitioned) == 1:
-                message = _('${item} published.',
-                            mapping = {'item': ', '.join(transitioned)})
-            else:
-                message = _('No items were published')
-            self.context.plone_utils.addPortalMessage(message, 'info')
-            self.destination_url = self.request.get_header("referer",
-                                   self.context.absolute_url())
-            self.request.response.redirect(self.destination_url)
+                    its.append(uid);
+            its = ",".join(its)
+            q = "/publish?items=" + its
+            dest = self.portal_url+"/analysisrequests" + q
+            self.request.response.redirect(dest)
 
         else:
             AnalysisRequestWorkflowAction.__call__(self)
-
-    def doPublish(self, context, request, action, analysis_requests):
-        return doPublish(context, request, action, analysis_requests)
 
 
 class ClientBatchesView(BatchFolderContentsView):
@@ -307,6 +285,19 @@ class ClientAnalysisRequestsView(AnalysisRequestsView):
                         'url': self.context.absolute_url() + "/portal_factory/"
                         "AnalysisRequest/Request new analyses/ar_add",
                         'icon': '++resource++bika.lims.images/add.png'}
+
+            # in client context we can use a permission check for this transition
+            # in multi-client listings, we must rather check against user roles.
+            if mtool.checkPermission(ModifyPortalContent, self.context):
+                review_states = []
+                for review_state in self.review_states:
+                    review_state.get('custom_actions', []).extend(
+                        [{'id': 'copy_to_new',
+                          'title': _('Copy to new'),
+                          'url': 'workflow_action?action=copy_to_new'}, ])
+                    review_states.append(review_state)
+                self.review_states = review_states
+
         return super(ClientAnalysisRequestsView, self).__call__()
 
 class ClientBatchAnalysisRequestsView(ClientAnalysisRequestsView):

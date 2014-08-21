@@ -2,7 +2,6 @@
 
 Library          Selenium2Library  timeout=5  implicit_wait=0.2
 Library          String
-Library          DebugLibrary
 Resource         keywords.txt
 Library          bika.lims.testing.Keywords
 Resource         plone/app/robotframework/selenium.robot
@@ -47,11 +46,6 @@ Repetitive Bika Setup stuff
     Click link       Accreditation
     Input Text       Confidence                 95
     Select Checkbox  LaboratoryAccredited
-    Input Text       AccreditationBodyLong      Accreditation Body Name
-    Input Text       AccreditationBody          ABBREVIATION
-    Input Text       AccreditationBodyURL       http://www.body.com
-    Input Text       Accreditation              Accreditation Type
-    Input Text       AccreditationReference     Reference
     Click Button  Save
     Wait Until Page Contains  Changes saved.
 

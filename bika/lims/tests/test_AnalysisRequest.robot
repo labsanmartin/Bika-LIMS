@@ -2,7 +2,6 @@
 
 Library          Selenium2Library  timeout=5  implicit_wait=0.2
 Library          String
-Library          DebugLibrary
 Resource         keywords.txt
 Library          bika.lims.testing.Keywords
 Resource         plone/app/robotframework/selenium.robot
@@ -17,6 +16,94 @@ Suite Teardown   Close All Browsers
 ${ar_factory_url}  portal_factory/AnalysisRequest/Request%20new%20analyses/ar_add
 
 *** Test Cases ***
+
+Add ARs by Row
+    Check the AR Add By Row javascript
+    Create Primary AR By Row With Template
+    Create Primary AR By Row
+    Create Mulitple Primary ARs By Row With Template
+
+Check Javascript
+    Check the AR Add javascript
+
+Analysis Request with no samping or preservation workflow
+    Go to                     ${PLONEURL}/clients/client-1
+    Click Link                Add
+    ${ar_id}=                 Complete ar_add form with template Bore
+    Go to                     ${PLONEURL}/clients/client-1/analysisrequests
+    Execute transition receive on items in form_id analysisrequests
+    Log out
+    Log in                    test_analyst    test_analyst
+    Go to                     ${PLONEURL}/clients/client-1/${ar_id}/manage_results
+    Submit results with out of range tests
+    Log out
+    Log in                    test_labmanager1    test_labmanager1
+    Go to                     ${PLONEURL}/clients/client-1/${ar_id}/manage_results
+    Add new Copper analysis to ${ar_id}
+    ${ar_id} state should be sample_received
+    Go to                     ${PLONEURL}/clients/client-1/${ar_id}/base_view
+    Execute transition verify on items in form_id lab_analyses
+    Log out
+    Log in                    test_labmanager1    test_labmanager1
+    # There is no "retract" transition on verified analyses - but there should/will be.
+    # Go to                     ${PLONEURL}/clients/client-1/${ar_id}/base_view
+    # Execute transition retract on items in form_id lab_analyses
+
+Create two different ARs from the same sample.
+    Create Primary AR
+    Create Secondary AR
+    In a client context, only allow selecting samples from that client.
+
+*** Keywords ***
+
+Start browser
+    Open browser                        ${PLONEURL}/login_form
+    Log in                              test_labmanager         test_labmanager
+    Wait until page contains            You are now logged in
+    Set selenium speed                  ${SELENIUM_SPEED}
+
+Check the AR Add By Row javascript
+   # check that the Contact CC auto-fills correctly when a contact is selected
+    Log out
+    Log in                      test_labmanager1    test_labmanager1
+    Wait until page contains    You are now logged in
+    Go to                       ${PLONEURL}/clients/client-1
+    Wait until page contains    Happy
+    Select from list            layout      rows
+    Click Link                  Add
+    SelectDate                          ar_0_SamplingDate       1
+    Select From Dropdown                ar_0_SampleType         Water
+    Select from dropdown                Contact            Rita
+    Click element               ar_0_Analyses
+    Wait until page contains    Select Analyses for AR
+
+    # check that we can expand and collaps the analysis categories
+    click element                       xpath=.//th[@id="cat_lab_Microbiology"]
+    wait until page contains            Clostridia
+    click element                       xpath=.//th[@id="cat_lab_Microbiology"]
+    element should not be visible             Clostridia
+    click element                       xpath=.//th[@id="cat_lab_Microbiology"]
+    page should contain                 Clostridia
+
+    # check analysis values appear
+    click element                       xpath=.//th[@id="cat_field_Water Chemistry"]
+    wait until page contains            pH (field)
+    Select checkbox                     xpath=//input[@title="pH (field)"]
+    wait until page contains            14
+
+    Click element                       xpath=//th[@id="cat_lab_Metals"]
+    Select checkbox                     xpath=//input[@title="Calcium"]
+    Click Button                        Submit
+    Set Selenium Timeout                10
+    Click element                       ar_0_Analyses
+    Wait until page contains            Select Analyses for AR
+    wait until page contains            Temperature
+    wait until page contains            Calcium
+
+# XXX Automatic expanded categories
+# XXX Restricted categories
+# XXX preservation workflow
+# XXX copy across in all fields
 
 Check the AR Add javascript
    # check that the Contact CC auto-fills correctly when a contact is selected
@@ -42,79 +129,6 @@ Check the AR Add javascript
     click element                       xpath=.//th[@id="cat_lab_Microbiology"]
     page should contain                 Clostridia
 
-# XXX Automatic expanded categories
-# XXX Restricted categories
-# XXX preservation workflow
-# XXX field analyses
-# XXX copy across in all fields
-
-Analysis Request with no sampling or preservation workflow
-
-    Go to                     ${PLONEURL}/clients/client-1
-    Click Link                Add
-    ${ar_id}=                 Complete ar_add form with template Bore
-    Go to                     ${PLONEURL}/clients/client-1/analysisrequests
-    Execute transition receive on items in form_id analysisrequests
-    Log out
-    Log in                    test_analyst    test_analyst
-    Go to                     ${PLONEURL}/clients/client-1/${ar_id}/manage_results
-    Submit results with out of range tests
-    Log out
-    Log in                    test_labmanager1    test_labmanager1
-    Wait until page contains  You are now logged in
-    Go to                     ${PLONEURL}/clients/client-1/${ar_id}/manage_results
-    Add new Copper analysis to ${ar_id}
-    ${ar_id} state should be sample_received
-    Go to                     ${PLONEURL}/clients/client-1/${ar_id}/base_view
-    Execute transition verify on items in form_id lab_analyses
-    Log out
-    Log in                    test_labmanager1    test_labmanager1
-    # There is no "retract" transition on verified analyses - but there should/will be.
-    # Go to                     ${PLONEURL}/clients/client-1/${ar_id}/base_view
-    # Execute transition retract on items in form_id lab_analyses
-
-Analysis Request with Sampling Workflow on and no preservation selected
-    Enable Sampling Workflow
-    Go to                     ${PLONEURL}/clients/client-1
-    Click Link                Add
-    ${ar_id}=                 Complete ar_add form with template Bore
-    Go to                     ${PLONEURL}/clients/client-1/analysisrequests
-    page should contain       To Be Sampled
-    Go to                     ${PLONEURL}/clients/client-1/${ar_id}
-    Click element             css=.state-to_be_sampled
-    sleep    .5
-    Click element             css=#workflow-transition-sample
-    debug
-    Page should contain       saved.
-    # no preservation workflow, straight to received.
-    Page should contain       Received
-
-Create two different ARs from the same sample.
-    Create Primary AR
-    Create Secondary AR
-    In a client context, only allow selecting samples from that client.
-
-*** Keywords ***
-
-Start browser
-    Open browser                        ${PLONEURL}/login_form
-    Log in                              test_labmanager         test_labmanager
-    Wait until page contains            You are now logged in
-    Set selenium speed                  ${SELENIUM_SPEED}
-
-Disable Sampling Workflow
-    go to                               ${PLONEURL}/bika_setup/edit
-    click link                          Analyses
-    unselect checkbox                     SamplingWorkflowEnabled
-    click button                        Save
-
-Enable Sampling Workflow
-    go to                               ${PLONEURL}/bika_setup/edit
-    click link                          Analyses
-    select checkbox                     SamplingWorkflowEnabled
-    click button                        Save
-
-
 Create Primary AR
     Log in                      test_labmanager  test_labmanager
     @{time} =                   Get Time        year month day hour min sec
@@ -129,6 +143,94 @@ Create Primary AR
     Click Button                Save
     Set Selenium Timeout        10
     Wait until page contains    created
+    ${ar_id} =                  Get text      //dl[contains(@class, 'portalMessage')][2]/dd
+    ${ar_id} =                  Set Variable  ${ar_id.split()[2]}
+    Go to                       http://localhost:55001/plone/clients/client-1/analysisrequests
+    Wait until page contains    ${ar_id}
+    Select checkbox             xpath=//input[@item_title="${ar_id}"]
+    Click button                xpath=//input[@value="Receive sample"]
+    Wait until page contains    saved
+    [return]                    ${ar_id}
+
+Create Primary AR By Row
+    Log in                      test_labmanager  test_labmanager
+    @{time} =                   Get Time        year month day hour min sec
+    Go to                       ${PLONEURL}/clients/client-1
+    Wait until page contains element    css=body.portaltype-client
+    Input text                  ar_count    2
+    Select from list            layout      rows
+    Click Link                  Add
+    Wait until page contains    Request new analyses
+    Select from dropdown        Contact                     Rita
+    Select Date                 ar_0_SamplingDate           @{time}[2]
+    Select from dropdown        ar_0_SampleType             Water
+    Click element               ar_0_Analyses
+    Wait until page contains    Select Analyses for AR
+    Click element               xpath=//th[@id="cat_lab_Metals"]
+    Select checkbox             xpath=//input[@title="Calcium"]
+    Click Button                Submit
+    Set Selenium Timeout        10
+    ${Analyses} =               Get value    xpath=//input[@id="ar_0_Analyses"]
+    Log                         ${Analyses}
+    Should Be Equal             ${Analyses}    Calcium
+    Click Button                Save
+    Wait until page contains    was successfully created.
+    ${ar_id} =                  Get text      //dl[contains(@class, 'portalMessage')][2]/dd
+    ${ar_id} =                  Set Variable  ${ar_id.split()[2]}
+    Go to                       http://localhost:55001/plone/clients/client-1/analysisrequests
+    Wait until page contains    ${ar_id}
+    Select checkbox             xpath=//input[@item_title="${ar_id}"]
+    Click button                xpath=//input[@value="Receive sample"]
+    Wait until page contains    saved
+    [return]                    ${ar_id}
+
+Create Mulitple Primary ARs By Row With Template
+    Log in                      test_labmanager  test_labmanager
+    @{time} =                   Get Time        year month day hour min sec
+    Go to                       ${PLONEURL}/clients/client-1
+    Wait until page contains element    css=body.portaltype-client
+    Input text                  ar_count    2
+    Select from list            layout      rows
+    Click Link                  Add
+    Wait until page contains    Request new analyses
+    Select from dropdown        Contact                     Rita
+    Select Date                 ar_0_SamplingDate           @{time}[2]
+    Select from dropdown        ar_0_Template               Bore
+    Set Selenium Timeout        10
+    ${Analyses} =               Get value    xpath=//input[@id="ar_0_Analyses"]
+    Log                         ${Analyses}
+    Should Be Equal             ${Analyses}    Calcium, Magnesium
+    Click Element               //img[contains(@class, 'TemplateCopyButton')]
+    Click Element               //img[contains(@class, 'SamplingDateCopyButton')]
+    Click Button                Save
+    Wait until page contains    were successfully created.
+    ${ar_id} =                  Get text      //dl[contains(@class, 'portalMessage')][2]/dd
+    ${ar_id_1} =                Set Variable  ${ar_id.split()[2]}
+    ${ar_id_1} =                Set Variable  ${ar_id_1.split(',')[0]}
+    ${ar_id_2} =                Set Variable  ${ar_id.split()[3]}
+    ${ar_id_2} =                Set Variable  ${ar_id_2.split(',')[0]}
+    Go to                       http://localhost:55001/plone/clients/client-1/analysisrequests
+    Wait until page contains    ${ar_id_1}
+    Page should contain         ${ar_id_2}
+
+Create Primary AR By Row With Template
+    Log in                      test_labmanager  test_labmanager
+    @{time} =                   Get Time        year month day hour min sec
+    Go to                       ${PLONEURL}/clients/client-1
+    Wait until page contains element    css=body.portaltype-client
+    Input text                  ar_count    2
+    Select from list            layout      rows
+    Click Link                  Add
+    Wait until page contains    Request new analyses
+    Select from dropdown        Contact                     Rita
+    Select Date                 ar_0_SamplingDate           @{time}[2]
+    Select from dropdown        ar_0_Template               Bore
+    Set Selenium Timeout        10
+    ${Analyses} =               Get value    xpath=//input[@id="ar_0_Analyses"]
+    Log                         ${Analyses}
+    Should Be Equal             ${Analyses}    Calcium, Magnesium
+    Click Button                Save
+    Wait until page contains    was successfully created.
     ${ar_id} =                  Get text      //dl[contains(@class, 'portalMessage')][2]/dd
     ${ar_id} =                  Set Variable  ${ar_id.split()[2]}
     Go to                       http://localhost:55001/plone/clients/client-1/analysisrequests
@@ -217,7 +319,7 @@ Submit results with out of range tests
     ${count} =                 Convert to integer    ${count}
     :FOR    ${index}           IN RANGE    1   ${count+1}
     \    TestResultsRange      xpath=(//input[@type='text' and @field='Result'])[${index}]       5   10
-    Sleep                      10s
+    Sleep                      5s
     Click Element              xpath=//input[@value='Submit for verification'][1]
     Wait Until Page Contains   Changes saved.
 
@@ -228,7 +330,7 @@ Submit results
     ${count} =                 Convert to integer    ${count}
     :FOR    ${index}           IN RANGE    1   ${count+1}
     \    Input text            xpath=(//input[@type='text' and @field='Result'])[${index}]   10
-    Sleep                      10s
+    Sleep                      5s
     Click Element              xpath=//input[@value='Submit for verification'][1]
     Wait Until Page Contains   Changes saved.
 

@@ -99,6 +99,14 @@ schema = BikaFolderSchema.copy() + Schema((
         )
     ),
     BooleanField(
+        'ShowNewReleasesInfo',
+        schemata="Security",
+        default=True,
+        widget=BooleanWidget(
+            label=_("Display an alert on new releases of Bika LIMS"),
+        )
+    ),
+    BooleanField(
         'ShowPrices',
         schemata="Accounting",
         default=True,
@@ -146,6 +154,16 @@ schema = BikaFolderSchema.copy() + Schema((
             label = _("VAT %"),
             description = _("Enter percentage value eg. 14.0. This percentage is applied system wide "
                             "but can be overwrittem on individual items"),
+        )
+    ),
+    StringField('DecimalMark',
+        schemata = "Results Reports",
+        vocabulary=DECIMAL_MARKS,
+        default = ".",
+        widget = SelectionWidget(
+            label = _("Default decimal mark"),
+            description = _("Preferred decimal mark for reports."),
+            format = 'select',
         )
     ),
     IntegerField('MinimumResults',
@@ -243,7 +261,9 @@ schema = BikaFolderSchema.copy() + Schema((
         default = True,
         widget = BooleanWidget(
             label = _("Enable AR Specifications"),
-            description=_("EnableARSpecs_description"),
+            description=_(
+                "Analysis specifications which are edited directly on the "
+                "Analysis Request."),
         ),
     ),
     StringField('DefaultARSpecs',
@@ -252,8 +272,24 @@ schema = BikaFolderSchema.copy() + Schema((
         vocabulary = DEFAULT_AR_SPECS,
         widget = SelectionWidget(
             label = _("Default AR Specifications"),
-            description = _("DefaultARSpecs_description"),
+            description = _(
+                "Choose the default specifications used for all AR views "
+                "to display alerts and notifications.  These will also be "
+                "applied when an AR is published in permanent media, "
+                "e.g. PDF."),
             format='select',
+        )
+    ),
+    IntegerField('ExponentialFormatThreshold',
+        schemata = "Analyses",
+        required = 1,
+        default = 7,
+        widget = IntegerWidget(
+        label = _("Exponential format threshold"),
+        description = _("Result values with at least this number of significant "
+                        "digits are displayed in scientific notation using the "
+                        "letter 'e' to indicate the exponent.  The precision can be "
+                        "configured in individual Analysis Services."),
         )
     ),
     BooleanField('EnableAnalysisRemarks',

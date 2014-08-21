@@ -1,34 +1,42 @@
-Bika Laboratory Information Management System
+Bika LIMS
+---------
 
-Installation
-------------
+### The meaning of Gaob
 
-1. Read https://plone.org/documentation/manual/installing-plone
-2. Read https://plone.org/documentation/kb/installing-add-ons-quick-how-to
-3. Install Plone and the "bika.lims" package
+In the tradition of Chief Inkosi Bika LIMS 2 using a title for a release, this edition is code-named Gaob Bika LIMS 3. Gaob, King, is taken from Khoi San Nama, language of the world's first people.
 
-For unix-like systems, download and run the script that, if all goes well, should install the prerequisite Plone 4.3.3 and Bika LIMS in /home/bika and start the server in foreground on port 8080. 
+### Documentation
 
-  wget  -nc  --no-check-certificate  https://raw.githubusercontent.com/bikalabs/Bika-LIMS/develop/install.sh
+Work in progress:
 
-  chmod +x install.sh
+    [User Manual](demo.bikalabs.com/knowledge-centre/manual/bika-3-user-manual)
+    [GitHub Wiki](github.com/bikalabs/Bika-LIMS/wiki)
 
-  sudo ./install.sh
+### Gaob Bika LIMS 3 installation
 
-Windows installations require Visual Studio 2008 correctly configured, and a normal python .MSI installation before 
-buildout will compile cffi and cairo binaries. 
+Gaob Bika 3 installs easily. Follow the instructions in the Installation Guide on the GitHub Wiki.
+Source code
 
-If you have questions, please post to one of our mailing lists:
+If you want to stay up to date with development, you can retrieve the source directly from the code repository for updates. It's the recommended installation method for developers and users who want to test the latest version.
 
-* Users: http://lists.sourceforge.net/lists/listinfo/bika-users
-* LIMS design: https://groups.google.com/forum/?hl=en#%21forum/bika-design
-* Developers: http://lists.sourceforge.net/lists/listinfo/bika-developers
+    [Source repository](github.com/bikalabs/Bika-LIMS/tree/develop)
 
-Please log issues, feature requests, or bug reports in the public issue
-tracker at Github:
+### Feedback and support
 
-https://github.com/bikalabs/Bika-LIMS/issues
+Mailing Lists:
 
-Bika Lab Systems
-info@bikalabs.com
-http://www.bikalabs.com
+    * Users: [bika-users](http://lists.sourceforge.net/lists/listinfo/bika-users]
+    * LIMS design: [lims-design](https://groups.google.com/forum/?hl=en#%21forum/bika-design]
+    * Developers: [bika-developers](http://lists.sourceforge.net/lists/listinfo/bika-developers]
+
+Issue Tracker: 
+
+    http://jira.bikalabs.com/
+
+IRC: 
+
+    irc://freenode.net/#bika
+
+Bika Lab Systems  
+info@bikalabs.com  
+http://www.bikalabs.com  

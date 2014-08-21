@@ -1,5 +1,4 @@
 from bika.lims.adapters.referencewidgetvocabulary import DefaultReferenceWidgetVocabulary
-from bika.lims.adapters.widgetvisibility import WidgetVisibility as _WV
 from bika.lims.jsonapi import get_include_fields
 from bika.lims.jsonapi import load_brain_metadata
 from bika.lims.jsonapi import load_field_values
@@ -9,7 +8,7 @@ from bika.lims.interfaces import IJSONReadExtender
 from bika.lims.permissions import *
 from bika.lims.workflow import get_workflow_actions
 from bika.lims.vocabularies import CatalogVocabulary
-from bika.lims.utils import to_utf8, getHiddenAttributesForClass
+from bika.lims.utils import to_utf8
 from bika.lims.workflow import doActionFor
 from DateTime import DateTime
 from Products.Archetypes import PloneMessageFactory as PMF
@@ -76,210 +75,6 @@ class ClientContactVocabularyFactory(CatalogVocabulary):
             path={'query': "/".join(parent.getPhysicalPath()),
                   'level': 0}
         )
-
-
-class WidgetVisibility(_WV):
-    """The values returned here do not decide the field order, only their
-    visibility.  The field order is set in the schema.
-    """
-
-    def __call__(self):
-        ret = super(WidgetVisibility, self).__call__()
-        workflow = getToolByName(self.context, 'portal_workflow')
-        state = workflow.getInfoFor(self.context, 'review_state')
-        if 'add' not in ret:
-            ret['add'] = {}
-        if 'visible' not in ret['add']:
-            ret['add']['visible'] = []
-        if 'hidden' not in ret['add']:
-            ret['add']['hidden'] = []
-        if self.context.aq_parent.portal_type == 'Client':
-            ret['add']['visible'].remove('Client')
-            ret['add']['hidden'].append('Client')
-        if self.context.aq_parent.portal_type == 'Batch':
-            ret['add']['visible'].remove('Batch')
-            ret['add']['hidden'].append('Batch')
-        # header_table default visible fields
-        ret['header_table'] = {
-            'prominent': ['Contact', 'CCContact', 'CCEmails'],
-            'visible': [
-                'Contact',
-                'CCContact',
-                'CCEmails',
-                'Sample',
-                'Batch',
-                'SubGroup',
-                'Template',
-                'Profile',
-                'SamplingDate',
-                'SampleType',
-                'Specification',
-                'PublicationSpecification',
-                'SamplePoint',
-                'StorageLocation',
-                'ClientOrderNumber',
-                'ClientReference',
-                'ClientSampleID',
-                'SamplingDeviation',
-                'Priority',
-                'SampleCondition',
-                'DateSampled',
-                'DateReceived',
-                'DatePublished',
-                'ReportDryMatter',
-                'AdHoc',
-                'Composite',
-                'MemberDiscount',
-                'InvoiceExclude',
-                ]}
-        # Edit and View widgets are displayed/hidden in different workflow
-        # states.  The widget.visible is used as a default.  This is placed
-        # here to manage the header_table display.
-        if state in ('to_be_sampled', 'to_be_preserved', 'sample_due', ):
-            ret['header_table']['visible'].remove('DateReceived')
-            ret['header_table']['visible'].remove('DatePublished')
-            ret['edit']['visible'] = [
-                'Contact',
-                'CCContact',
-                'CCEmails',
-                'AdHoc',
-                'Batch',
-                'SubGroup',
-                'ClientOrderNumber',
-                'ClientReference',
-                'ClientSampleID',
-                'Composite',
-                'InvoiceExclude'
-                'SampleCondition',
-                'SamplePoint',
-                'SampleType',
-                'SamplingDate',
-                'StorageLocation',
-                'SamplingDeviation',
-                'Priority',
-            ]
-            ret['view']['visible'] = [
-                'Contact',
-                'CCContact',
-                'CCEmails',
-                'DateSampled',
-                'MemberDiscount',
-                'Profile',
-                'ReportDryMatter',
-                'Specification',
-                'Sample',
-                'Template',
-            ]
-        elif state in ('sample_received', ):
-            ret['header_table']['visible'].remove('DatePublished')
-            ret['edit']['visible'] = [
-                'Contact',
-                'CCContact',
-                'CCEmails',
-                'Batch',
-                'SubGroup',
-                'ClientOrderNumber',
-                'ClientReference',
-                'ClientSampleID',
-                'SampleType',
-                'SamplePoint',
-                'StorageLocation',
-                'InvoiceExclude',
-                'Priority',
-            ]
-            ret['view']['visible'] = [
-                'Contact',
-                'CCContact',
-                'CCEmails',
-                'AdHoc',
-                'Composite',
-                'DateReceived',
-                'MemberDiscount',
-                'Profile',
-                'ReportDryMatter',
-                'Sample',
-                'SampleCondition',
-                'Specification',
-                'SamplingDate',
-                'SamplingDeviation',
-                'Template',
-            ]
-        # include this in to_be_verified - there may be verified analyses to
-        # pre-publish
-        elif state in ('to_be_verified', 'verified', ):
-            ret['header_table']['visible'].remove('DatePublished')
-            ret['edit']['visible'] = [
-                'PublicationSpecification',
-                'StorageLocation',
-                'Priority',
-            ]
-            ret['view']['visible'] = [
-                'Contact',
-                'CCContact',
-                'CCEmails',
-                'AdHoc',
-                'Batch',
-                'SubGroup',
-                'ClientOrderNumber',
-                'ClientReference',
-                'ClientSampleID',
-                'Composite',
-                'DateReceived',
-                'InvoiceExclude',
-                'MemberDiscount',
-                'Profile',
-                'ReportDryMatter',
-                'Sample',
-                'SampleCondition',
-                'SamplePoint',
-                'Specification',
-                'SampleType',
-                'SamplingDate',
-                'SamplingDeviation',
-                'Template',
-            ]
-        elif state in ('published', ):
-            ret['edit']['visible'] = [
-                'StorageLocation',
-                'PublicationSpecification',
-            ]
-            ret['view']['visible'] = [
-                'Contact',
-                'CCContact',
-                'CCEmails',
-                'AdHoc',
-                'Batch',
-                'SubGroup',
-                'ClientOrderNumber',
-                'ClientReference',
-                'ClientSampleID',
-                'Composite',
-                'DatePublished',
-                'DateReceived',
-                'InvoiceExclude'
-                'MemberDiscount',
-                'Profile',
-                'ReportDryMatter',
-                'Sample',
-                'SampleCondition',
-                'SamplePoint',
-                'Specification',
-                'SampleType',
-                'SamplingDate',
-                'SamplingDeviation',
-                'Priority',
-                'Template',
-            ]
-
-        hiddenattributes = getHiddenAttributesForClass(self.context.portal_type)
-        if hiddenattributes:
-            for section in ret.keys():
-                for key in ret[section]:
-                    if key == 'visible':
-                        for field in ret[section][key]:
-                            if field in hiddenattributes:
-                                ret[section][key].remove(field)
-        return ret
 
 
 class ReferenceWidgetVocabulary(DefaultReferenceWidgetVocabulary):
@@ -370,8 +165,9 @@ class mailto_link_from_contacts:
             contacts = [contacts, ]
         ret = []
         for contact in contacts:
-            mailto = "<a href='mailto:%s'>%s</a>" % (
-                contact.getEmailAddress(), contact.getFullname())
+            if contact:
+                mailto = "<a href='mailto:%s'>%s</a>" % (
+                    contact.getEmailAddress(), contact.getFullname())
             ret.append(mailto)
         return ",".join(ret)
 

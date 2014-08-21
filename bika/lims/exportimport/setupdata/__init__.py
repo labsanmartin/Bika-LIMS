@@ -1194,6 +1194,7 @@ class Analysis_Services(WorksheetImporter):
             priority = self.get_object(bsc, 'ARPriority', row.get('Priority_title'))
             obj.edit(
                 title=row['title'],
+                ShortTitle=row.get('ShortTitle', row['title']),
                 description=row.get('description', ''),
                 Keyword=row['Keyword'],
                 PointOfCapture=row['PointOfCapture'],
