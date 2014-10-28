@@ -15,12 +15,12 @@ from bika.lims.utils import t
 from zope.interface import implements
 
 schema = BikaSchema.copy() + Schema((
-    ComputedField('RequestID',
-        expression = 'here.getRequestID()',
-        widget = ComputedWidget(
-            visible = True,
-        ),
-    ),
+#     ComputedField('RequestID',
+#         expression = 'here.getRequestID()',
+#         widget = ComputedWidget(
+#             visible = True,
+#         ),
+#     ),
     FileField('AttachmentFile',
         widget = FileWidget(
             label=_("Attachment"),
@@ -40,13 +40,6 @@ schema = BikaSchema.copy() + Schema((
             label=_("Attachment Keys"),
         ),
     ),
-    DateTimeField('DateLoaded',
-        required = 1,
-        default_method = 'current_date',
-        widget = DateTimeWidget(
-            label=_("Date Loaded"),
-        ),
-    ),
     ComputedField('AttachmentTypeUID',
         expression="context.getAttachmentType().UID() if context.getAttachmentType() else ''",
         widget = ComputedWidget(
@@ -54,7 +47,7 @@ schema = BikaSchema.copy() + Schema((
         ),
     ),
     ComputedField('ClientUID',
-        expression = 'here.aq_parent.UID()',
+        expression = 'context.get_client_uid',
         widget = ComputedWidget(
             visible = False,
         ),
@@ -65,7 +58,7 @@ schema = BikaSchema.copy() + Schema((
 schema['id'].required = False
 schema['title'].required = False
 
-class Attachment(BaseFolder):
+class Attachment(BaseContent):
     security = ClassSecurityInfo()
     displayContentsTab = False
     schema = schema
@@ -90,6 +83,14 @@ class Attachment(BaseFolder):
                 return requestid
         else:
             return None
+
+    def get_client_uid(self):
+        if IAnalysisRequest.providedBy(self):
+            return self.aq_parent.UID()
+        elif IBatch.providedBy(self):
+            client = self.aq_parent.getClient()
+            if client:
+                return client.UID()
 
     def getRequest(self):
         """ Return the AR to which this is linked """
@@ -149,11 +150,5 @@ class Attachment(BaseFolder):
                 parent = tool.lookupObject(reference.sourceUID)
         workflow = getToolByName(self, 'portal_workflow')
         return workflow.getInfoFor(parent, 'review_state', '')
-
-    security.declarePublic('current_date')
-    def current_date(self):
-        """ return current date """
-        return DateTime()
-
 
 atapi.registerType(Attachment, PROJECTNAME)
