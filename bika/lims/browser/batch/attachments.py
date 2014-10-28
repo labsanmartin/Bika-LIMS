@@ -10,31 +10,30 @@ from bika.lims.workflow import doActionFor
 from DateTime import DateTime
 from Products.Archetypes import PloneMessageFactory as PMF
 from Products.CMFCore.utils import getToolByName
+from Products.CMFCore.permissions import ModifyPortalContent
 
 import plone
 
-class Attachments(BikaListingView):
+class AttachmentsView(BikaListingView):
 
     def __init__(self, context, request):
-        super(Attachments, self).__init__(context, request)
-        self.catalog = "bika_catalog"
-        self.contentFilter = {'portal_type': 'ARReport','sort_order': 'reverse'}
+        super(AttachmentsView, self).__init__(context, request)
+        self.contentFilter = {}
         self.context_actions = {}
         self.show_sort_column = False
         self.show_select_row = False
-        self.show_select_column = True
+        self.show_select_column = False
         self.show_workflow_action_buttons = False
         self.pagesize = 50
-        self.form_id = 'published_results'
-        self.icon = self.portal_url + "/++resource++bika.lims.images/attachments_big.png"
+        self.form_id = 'attachments'
+        self.icon = self.portal_url + "/++resource++bika.lims.images/attachment_big.png"
         self.title = self.context.translate(_("Attachments"))
         self.description = ""
         self.columns = {
             'Title': {'title': _('File')},
             'FileSize': {'title': _('Size')},
             'Date': {'title': _('Date')},
-            'PublishedBy': {'title': _('Published By')},
-            'Recipients': {'title': _('Recipients')},
+            'AttachmentKeys': {'title': _('Attachment Keys')},
         }
         self.review_states = [
             {'id': 'default',
@@ -43,61 +42,33 @@ class Attachments(BikaListingView):
              'columns': ['Title',
                          'FileSize',
                          'Date',
-                         'PublishedBy',
-                         'Recipients']},
+                         'AttachmentKeys']},
         ]
 
     def __call__(self):
-        ar = self.context
-        workflow = getToolByName(ar, 'portal_workflow')
-        # If is a retracted AR, show the link to child AR and show a warn msg
-        if workflow.getInfoFor(ar, 'review_state') == 'invalid':
-            childar = hasattr(ar, 'getChildAnalysisRequest') \
-                        and ar.getChildAnalysisRequest() or None
-            childid = childar and childar.getRequestID() or None
-            message = _('This Analysis Request has been withdrawn and is '
-                        'shown for trace-ability purposes only. Retest: '
-                        '${retest_child_id}.',
-                        mapping={'retest_child_id': safe_unicode(childid) or ''})
-            self.context.plone_utils.addPortalMessage(
-                self.context.translate(message), 'warning')
-        # If is an AR automatically generated due to a Retraction, show it's
-        # parent AR information
-        if hasattr(ar, 'getParentAnalysisRequest') \
-            and ar.getParentAnalysisRequest():
-            par = ar.getParentAnalysisRequest()
-            message = _('This Analysis Request has been '
-                        'generated automatically due to '
-                        'the retraction of the Analysis '
-                        'Request ${retracted_request_id}.',
-                        mapping={'retracted_request_id': par.getRequestID()})
-            self.context.plone_utils.addPortalMessage(
-                self.context.translate(message), 'info')
+        if self.portal_membership.checkPermission(ModifyPortalContent, self.portal.batches):
+            self.context_actions[_('Add')] = \
+                {'url': 'createObject?type_name=Attachment',
+                 'icon': self.portal.absolute_url() + '/++resource++bika.lims.images/add.png'}
         template = BikaListingView.__call__(self)
         return template
 
     def contentsMethod(self, contentFilter):
-        return self.context.objectValues('ARReport')
+        return self.context.objectValues('Attachment')
 
     def folderitems(self):
-        items = super(Attachments, self).folderitems()
-        pm = getToolByName(self.context, "portal_membership")
-        member = pm.getAuthenticatedMember()
-        roles = member.getRoles()
-        if 'Manager' not in roles \
-            and 'LabManager' not in roles:
-            return []
+        items = super(AttachmentsView, self).folderitems()
         for x in range(len(items)):
             if 'obj' in items[x]:
                 obj = items[x]['obj']
                 obj_url = obj.absolute_url()
-                pdf = obj.getPdf()
+                file = obj.getAttachment()
                 filesize = 0
                 title = _('Download')
-                anchor = "<a href='%s/at_download/Pdf'>%s</a>" % \
+                anchor = "<a href='%s/at_download/Attachment'>%s</a>" % \
                          (obj_url, _("Download"))
                 try:
-                    filesize = pdf.get_size()
+                    filesize = file.get_size()
                     filesize = filesize / 1024 if filesize > 0 else 0
                 except:
                     # POSKeyError: 'No blob file'
@@ -105,21 +76,8 @@ class Attachments(BikaListingView):
                     title = _('Not available')
                     anchor = title
                 items[x]['Title'] = title
+                items[x]['replace']['Title'] = anchor 
                 items[x]['FileSize'] = '%sKb' % filesize
                 fmt_date = self.ulocalized_time(obj.created(), long_format=1)
                 items[x]['Date'] = fmt_date
-                items[x]['PublishedBy'] = self.user_fullname(obj.Creator())
-                recip = ''
-                for recipient in obj.getRecipients():
-                    email = recipient['EmailAddress']
-                    val = recipient['Fullname']
-                    if email:
-                        val = "<a href='mailto:%s'>%s</a>" % (email, val)
-                    if len(recip) == 0:
-                        recip = val
-                    else:
-                        recip += (", " + val)
-
-                items[x]['replace']['Recipients'] = recip
-                items[x]['replace']['Title'] = anchor
         return items
