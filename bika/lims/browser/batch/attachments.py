@@ -33,7 +33,7 @@ class AttachmentsView(BikaListingView):
             'Title': {'title': _('File')},
             'FileSize': {'title': _('Size')},
             'Date': {'title': _('Date')},
-            'AttachmentKeys': {'title': _('Attachment Keys')},
+            'getAttachmentKeys': {'title': _('Attachment Keys')},
         }
         self.review_states = [
             {'id': 'default',
@@ -42,7 +42,7 @@ class AttachmentsView(BikaListingView):
              'columns': ['Title',
                          'FileSize',
                          'Date',
-                         'AttachmentKeys']},
+                         'getAttachmentKeys']},
         ]
 
     def __call__(self):
@@ -62,11 +62,11 @@ class AttachmentsView(BikaListingView):
             if 'obj' in items[x]:
                 obj = items[x]['obj']
                 obj_url = obj.absolute_url()
-                file = obj.getAttachment()
+                file = obj.getAttachmentFile()
                 filesize = 0
                 title = _('Download')
-                anchor = "<a href='%s/at_download/Attachment'>%s</a>" % \
-                         (obj_url, _("Download"))
+                anchor = "<a href='%s/AttachmentFile'>%s</a>" % \
+                         (obj_url, title)
                 try:
                     filesize = file.get_size()
                     filesize = filesize / 1024 if filesize > 0 else 0

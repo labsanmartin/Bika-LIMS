@@ -14,6 +14,8 @@ from bika.lims import bikaMessageFactory as _
 from bika.lims.utils import t
 from zope.interface import implements
 
+from bika.lims.browser.widgets import ReferenceWidget as BikaReferenceWidget
+
 schema = BikaSchema.copy() + Schema((
 #     ComputedField('RequestID',
 #         expression = 'here.getRequestID()',
@@ -22,6 +24,7 @@ schema = BikaSchema.copy() + Schema((
 #         ),
 #     ),
     FileField('AttachmentFile',
+        required = 1,
         widget = FileWidget(
             label=_("Attachment"),
         ),
@@ -29,8 +32,9 @@ schema = BikaSchema.copy() + Schema((
     ReferenceField('AttachmentType',
         required = 0,
         allowed_types = ('AttachmentType',),
+        catalog_name = "bika_setup_catalog",
         relationship = 'AttachmentAttachmentType',
-        widget = ReferenceWidget(
+        widget = BikaReferenceWidget(
             label=_("Attachment Type"),
         ),
     ),
@@ -56,6 +60,7 @@ schema = BikaSchema.copy() + Schema((
 )
 
 schema['id'].required = False
+schema['title'].widget.visible = False
 schema['title'].required = False
 
 class Attachment(BaseContent):
@@ -70,7 +75,17 @@ class Attachment(BaseContent):
 
     def Title(self):
         """ Return the Id """
-        return safe_unicode(self.getId()).encode('utf-8')
+        try:
+            file = self.getAttachmentFile()
+            if not file:
+                return ''
+        except:
+            return ''
+        
+        fn = file.getFilename()
+        if fn:
+            return safe_unicode(fn).encode('utf-8')
+        return ''
 
     def getTextTitle(self):
         """ Return the request and possibly analayis title as title """
