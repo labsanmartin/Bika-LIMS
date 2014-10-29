@@ -94,7 +94,21 @@ Test batch inherited ARs
     click button                        Save
     go to                               ${PLONEURL}/batches/B-002/batchbook
 
+Test Batch-Attach
+    Log in  test_labmanager  test_labmanager
 
+    Add Batch
+    Add AttachmentType
+    go to                               ${PLONEURL}/batches/B-001
+    click link                          Attachments
+    page should contain                 Attachment Type
+    click link                          Add
+    Choose File                         archetypes-fieldname-AttachmentFile    ${PLONEURL}/logo.png
+    select from dropdown                archetypes-fieldname-AttachmentType    MS
+    Input Text                          AttachmentKeys                         ASDFK
+    click button                        Save
+    Wait until page contains            Changes saved.    
+    
 *** Keywords ***
 
 Add Batch
@@ -108,6 +122,15 @@ Add Batch
     Click Button                 xpath=//input[@value="Save"]
     Wait until page contains     saved
 
+Add AttachmentType
+    Go to  ${PLONEURL}/bika_setup/bika_attachmenttypes
+    Click link  Add
+    Wait Until Page Contains Element  title
+    Input Text  title          MSDS
+    Input Text  description    Temporary test object
+    Click Button  Save
+    Wait Until Page Contains  Changes saved.
+    
 Batch state should be
     [Arguments]   ${state_id}
     Go to                        http://localhost:55001/plone/batches/B-001/analysisrequests
