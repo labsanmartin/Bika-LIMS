@@ -97,15 +97,14 @@ Test batch inherited ARs
 Test Batch-Attach
     Log in  test_labmanager  test_labmanager
 
+    ${PATH_TO_TEST} =                   run keyword   resource_filename
     Add Batch
     Add AttachmentType
-    go to                               ${PLONEURL}/batches/B-001
-    click link                          Attachments
-    page should contain                 Attachment Type
+    go to                               ${PLONEURL}/batches/B-001/attachments
     click link                          Add
-    Choose File                         archetypes-fieldname-AttachmentFile    ${PLONEURL}/logo.png
-    select from dropdown                archetypes-fieldname-AttachmentType    MS
-    Input Text                          AttachmentKeys                         ASDFK
+    Choose File                         AttachmentFile_file           ${PATH_TO_TEST}/test_Batch.robot
+    select from dropdown                AttachmentType                MS
+    Input Text                          AttachmentKeys                ASDFK
     click button                        Save
     Wait until page contains            Changes saved.    
     
