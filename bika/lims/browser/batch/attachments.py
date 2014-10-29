@@ -34,6 +34,7 @@ class AttachmentsView(BikaListingView):
             'FileSize': {'title': _('Size')},
             'Date': {'title': _('Date')},
             'getAttachmentKeys': {'title': _('Attachment Keys')},
+            'AttachmentType': {'title': _('Attachment Type')},
         }
         self.review_states = [
             {'id': 'default',
@@ -42,7 +43,8 @@ class AttachmentsView(BikaListingView):
              'columns': ['Title',
                          'FileSize',
                          'Date',
-                         'getAttachmentKeys']},
+                         'getAttachmentKeys',
+                         'AttachmentType']},
         ]
 
     def __call__(self):
@@ -64,9 +66,10 @@ class AttachmentsView(BikaListingView):
                 obj_url = obj.absolute_url()
                 file = obj.getAttachmentFile()
                 filesize = 0
-                title = _('Download')
+                title = file.filename
                 anchor = "<a href='%s/AttachmentFile'>%s</a>" % \
                          (obj_url, title)
+                AttachmentType = obj.getAttachmentType().Title() if obj.getAttachmentType() else ''
                 try:
                     filesize = file.get_size()
                     filesize = filesize / 1024 if filesize > 0 else 0
@@ -74,10 +77,12 @@ class AttachmentsView(BikaListingView):
                     # POSKeyError: 'No blob file'
                     # Show the record, but not the link
                     title = _('Not available')
-                    anchor = title
+                    anchor = title 
                 items[x]['Title'] = title
                 items[x]['replace']['Title'] = anchor 
                 items[x]['FileSize'] = '%sKb' % filesize
                 fmt_date = self.ulocalized_time(obj.created(), long_format=1)
                 items[x]['Date'] = fmt_date
+                items[x]['AttachmentType'] = AttachmentType
+                
         return items
