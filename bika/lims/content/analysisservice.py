@@ -242,6 +242,7 @@ schema = BikaSchema.copy() + Schema((
     FixedPointField('LowerDetectionLimit',
                     schemata="Analysis",
                     default='0.00',
+                    precision=7,
                     widget=DecimalWidget(
                         label = _("Lower Detection Limit (LDL)"),
                         description = _("The Lower Detection Limit is "
@@ -257,6 +258,7 @@ schema = BikaSchema.copy() + Schema((
     FixedPointField('UpperDetectionLimit',
                 schemata="Analysis",
                 default='1000000000.00',
+                precision=7,
                 widget=DecimalWidget(
                     label = _("Upper Detection Limit (UDL)"),
                     description = _("The Upper Detection Limit is the "
@@ -896,6 +898,7 @@ schema = BikaSchema.copy() + Schema((
     ),
     StringField('CommercialID',
         searchable=1,
+        schemata = 'Description',
         required=0,
         widget=StringWidget(
             label=_("Commercial ID"),
@@ -904,7 +907,7 @@ schema = BikaSchema.copy() + Schema((
     ),
     StringField('ProtocolID',
         searchable=1,
-        schemata = 'Insurance',
+        schemata = 'Description',
         required=0,
         widget=StringWidget(
             label=_("Protocol ID"),
