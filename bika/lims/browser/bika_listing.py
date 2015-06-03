@@ -536,7 +536,7 @@ class BikaListingView(BrowserView):
         # override from self attributes
         for x in "pagenumber", "pagesize", "review_state", "sort_order", "sort_on":
             if str(getattr(self, x, None)) != 'None':
-                # I don't understand why on AR listing, getattr(self,x) 
+                # I don't understand why on AR listing, getattr(self,x)
                 # is a dict, but this line will resolve LIMS-1420
                 if x == "review_state" and type(getattr(self, x))==dict:
                     query['%s_%s'%(self.form_id, x)] = getattr(self, x)['id']
@@ -649,8 +649,18 @@ class BikaListingView(BrowserView):
             path = hasattr(obj, 'getPath') and obj.getPath() or \
                  "/".join(obj.getPhysicalPath())
 
-            if hasattr(obj, 'getObject'):
-                obj = obj.getObject()
+            # Unresolved error
+            # LIMS-1861 Recurrent error after managing analysis from an AR
+            # https://jira.bikalabs.com/browse/LIMS-1861
+            # Was:
+            #   if hasattr(obj, 'getObject'):
+            #        obj = obj.getObject()
+            try:
+                if hasattr(obj, 'getObject'):
+                    obj = obj.getObject()
+            except AttributeError, e:
+                logger.error("Unresolved error LIMS-1861: %s" % str(e))
+                continue
 
             # check if the item must be rendered or not (prevents from
             # doing it later in folderitems) and dealing with paging
@@ -811,7 +821,17 @@ class BikaListingView(BrowserView):
         transitions = {}
         actions = []
         for obj in [i.get('obj', '') for i in self.items]:
-            obj = hasattr(obj, 'getObject') and obj.getObject() or obj
+            # Unresolved error
+            # LIMS-1861 Recurrent error after managing analysis from an AR
+            # https://jira.bikalabs.com/browse/LIMS-1861
+            # Was:
+            #   obj = hasattr(obj, 'getObject') and obj.getObject() or obj
+            try:
+                 obj = hasattr(obj, 'getObject') and obj.getObject() or obj
+            except AttributeError, e:
+                logger.error("Unresolved error LIMS-1861: %s" % str(e))
+                continue
+
             for it in workflow.getTransitionsFor(obj):
                 transitions[it['id']] = it
 

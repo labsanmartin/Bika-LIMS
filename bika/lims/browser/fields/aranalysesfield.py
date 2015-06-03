@@ -66,7 +66,20 @@ class ARAnalysesField(ObjectField):
         if not retracted:
             analyses = [a for a in analyses if a.review_state != 'retracted']
         if full_objects:
-            analyses = [a.getObject() for a in analyses]
+            # Unresolved error
+            # LIMS-1861 Recurrent error after managing analysis from an AR
+            # https://jira.bikalabs.com/browse/LIMS-1861
+            # Was:
+            #   analyses = [a.getObject() for a in analyses]
+            ans = []
+            for a in analyses:
+                try:
+                    obj = a.getObject()
+                except AttributeError, e:
+                    logger.error("Unresolved error LIMS-1861: %s" % str(e))
+                    continue
+                ans.append(obj)
+            analyses = ans
         return analyses
 
     security.declarePrivate('set')
