@@ -827,7 +827,7 @@ class BikaListingView(BrowserView):
             # Was:
             #   obj = hasattr(obj, 'getObject') and obj.getObject() or obj
             try:
-                 obj = hasattr(obj, 'getObject') and obj.getObject() or obj
+                obj = hasattr(obj, 'getObject') and obj.getObject() or obj
             except AttributeError, e:
                 logger.error("Unresolved error LIMS-1861: %s" % str(e))
                 continue
