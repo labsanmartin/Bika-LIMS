@@ -309,6 +309,10 @@ class IMethod(Interface):
 
     ""
 
+class IMultifile(Interface):
+
+    ""
+
 class ILabProducts(Interface):
 
     ""

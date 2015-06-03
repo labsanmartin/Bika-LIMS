@@ -652,13 +652,17 @@ class Instruments(WorksheetImporter):
             obj = _createObjectByType("Instrument", folder, tmpID())
 
             obj.edit(
-                title=row['title'],
+                title=row.get('title', ''),
+                AssetNumber=row.get('assetnumber', ''),
                 description=row.get('description', ''),
-                Type=row['Type'],
-                Brand=row['Brand'],
-                Model=row['Model'],
+                Type=row.get('Type', ''),
+                Brand=row.get('Brand', ''),
+                Model=row.get('Model', ''),
                 SerialNo=row.get('SerialNo', ''),
-                DataInterface=row.get('DataInterface', '')
+                DataInterface=row.get('DataInterface', ''),
+                Location=row.get('Location', ''),
+                InstallationDate=row.get('Instalationdate', ''),
+                UserManualID=row.get('UserManualID', ''),
             )
             instrumenttype = self.get_object(bsc, 'InstrumentType', title=row.get('Type'))
             manufacturer = self.get_object(bsc, 'Manufacturer', title=row.get('Brand'))
@@ -666,6 +670,28 @@ class Instruments(WorksheetImporter):
             obj.setInstrumentType(instrumenttype)
             obj.setManufacturer(manufacturer)
             obj.setSupplier(supplier)
+
+            # Attaching the instrument's photo
+            if row.get('Photo', None):
+                path = resource_filename(
+                    self.dataset_project,
+                    "setupdata/%s/%s" % (self.dataset_name,
+                                         row['Photo'])
+                )
+                file_data = open(path, "rb").read()
+                obj.setPhoto(file_data)
+
+
+            # Attaching the Installation Certificate if exists
+            if row.get('InstalationCertificate', None):
+                path = resource_filename(
+                    self.dataset_project,
+                    "setupdata/%s/%s" % (self.dataset_name,
+                                         row['InstalationCertificate'])
+                )
+                file_data = open(path, "rb").read()
+                obj.setInstallationCertificate(file_data)
+
             obj.unmarkCreationFlag()
             renameAfterCreation(obj)
 
@@ -675,7 +701,7 @@ class Instrument_Validations(WorksheetImporter):
     def Import(self):
         bsc = getToolByName(self.context, 'bika_setup_catalog')
         for row in self.get_rows(3):
-            if not row['instrument'] or not row['title']:
+            if not row.get('instrument', None) or not row.get('title', None):
                 continue
 
             folder = self.get_object(bsc, 'Instrument', row.get('instrument'))
@@ -688,8 +714,16 @@ class Instrument_Validations(WorksheetImporter):
                     Validator=row.get('validator', ''),
                     Considerations=row.get('considerations', ''),
                     WorkPerformed=row.get('workperformed', ''),
-                    Remarks=row.get('remarks', '')
+                    Remarks=row.get('remarks', ''),
+                    DateIssued=row.get('DateIssued', ''),
+                    ReportID=row.get('ReportID', '')
                 )
+                # Getting lab contacts
+                bsc = getToolByName(self.context, 'bika_setup_catalog')
+                lab_contacts = [o.getObject() for o in bsc(portal_type="LabContact", nactive_state='active')]
+                for contact in lab_contacts:
+                    if contact.getFullname() == row.get('Worker', ''):
+                        obj.setWorker(contact.UID())
                 obj.unmarkCreationFlag()
                 renameAfterCreation(obj)
 
@@ -699,7 +733,7 @@ class Instrument_Calibrations(WorksheetImporter):
     def Import(self):
         bsc = getToolByName(self.context, 'bika_setup_catalog')
         for row in self.get_rows(3):
-            if not row['instrument'] or not row['title']:
+            if not row.get('instrument', None) or not row.get('title', None):
                 continue
 
             folder = self.get_object(bsc, 'Instrument', row.get('instrument'))
@@ -712,8 +746,16 @@ class Instrument_Calibrations(WorksheetImporter):
                     Calibrator=row.get('calibrator', ''),
                     Considerations=row.get('considerations', ''),
                     WorkPerformed=row.get('workperformed', ''),
-                    Remarks=row.get('remarks', '')
+                    Remarks=row.get('remarks', ''),
+                    DateIssued=row.get('DateIssued', ''),
+                    ReportID=row.get('ReportID', '')
                 )
+                # Getting lab contacts
+                bsc = getToolByName(self.context, 'bika_setup_catalog')
+                lab_contacts = [o.getObject() for o in bsc(portal_type="LabContact", nactive_state='active')]
+                for contact in lab_contacts:
+                    if contact.getFullname() == row.get('Worker', ''):
+                        obj.setWorker(contact.UID())
                 obj.unmarkCreationFlag()
                 renameAfterCreation(obj)
 
@@ -731,14 +773,75 @@ class Instrument_Certifications(WorksheetImporter):
                 obj = _createObjectByType("InstrumentCertification", folder, tmpID())
                 obj.edit(
                     title=row['title'],
+                    AssetNumber=row.get('assetnumber', ''),
                     Date=row.get('date', ''),
                     ValidFrom=row.get('validfrom', ''),
                     ValidTo=row.get('validto', ''),
                     Agency=row.get('agency', ''),
-                    Remarks=row.get('remarks', '')
+                    Remarks=row.get('remarks', ''),
                 )
+                # Attaching the Report Certificate if exists
+                if row.get('report', None):
+                    path = resource_filename(
+                        self.dataset_project,
+                        "setupdata/%s/%s" % (self.dataset_name,
+                                             row['report'])
+                    )
+                    file_data = open(path, "rb").read()
+                    obj.setDocument(file_data)
+                # Getting lab contacts
+                bsc = getToolByName(self.context, 'bika_setup_catalog')
+                lab_contacts = [o.getObject() for o in bsc(portal_type="LabContact", nactive_state='active')]
+                for contact in lab_contacts:
+                    if contact.getFullname() == row.get('preparedby', ''):
+                        obj.setPreparator(contact.UID())
+                    if contact.getFullname() == row.get('approvedby', ''):
+                        obj.setValidator(contact.UID())
                 obj.unmarkCreationFlag()
                 renameAfterCreation(obj)
+
+
+class Instrument_Documents(WorksheetImporter):
+
+    def Import(self):
+        bsc = getToolByName(self.context, 'bika_setup_catalog')
+        for row in self.get_rows(3):
+            if not row.get('instrument', ''):
+                continue
+
+            folder = self.get_object(bsc, 'Instrument', row.get('instrument', ''))
+            if folder:
+                # This content type need a file
+                if row.get('File', None):
+                    path = resource_filename(
+                        self.dataset_project,
+                        "setupdata/%s/%s" % (self.dataset_name,
+                                             row['File'])
+                    )
+                    file_data = open(path, "rb").read()
+                    # Obtain all created instrument documents content type
+                    catalog = getToolByName(self.context, 'bika_setup_catalog')
+                    documents_brains = catalog.searchResults({'portal_type': 'Multifile'})
+                    # If a the new document has the same DocumentID as a created document, this object won't be created.
+                    idAlreadyInUse = False
+                    for item in documents_brains:
+                        if item.getObject().getDocumentID() == row.get('DocumentID', ''):
+                            warning = "The ID '%s' used for this document is already in use on instrument '%s', consequently " \
+                                      "the file hasn't been upload." % (row.get('DocumentID', ''), row.get('instrument', ''))
+                            self.context.plone_utils.addPortalMessage(warning)
+                            idAlreadyInUse = True
+                    if not idAlreadyInUse:
+                        obj = _createObjectByType("Multifile", folder, tmpID())
+                        obj.edit(
+                            DocumentID=row.get('DocumentID', ''),
+                            DocumentVersion=row.get('DocumentVersion', ''),
+                            DocumentLocation=row.get('DocumentLocation', ''),
+                            DocumentType=row.get('DocumentType', ''),
+                            File=file_data
+                        )
+
+                        obj.unmarkCreationFlag()
+                        renameAfterCreation(obj)
 
 
 class Instrument_Maintenance_Tasks(WorksheetImporter):

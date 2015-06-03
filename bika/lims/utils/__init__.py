@@ -384,7 +384,7 @@ def createPdf(htmlreport, outfile=None, css=None, images={}):
         htmlfile = open(htmlfilepath, 'w')
         htmlfile.write(htmlreport)
         htmlfile.close()
-    return open(outfile, 'r').read();
+    return open(outfile, 'rb').read();
 
 def attachPdf(mimemultipart, pdfreport, filename=None):
     part = MIMEBase('application', "pdf")
@@ -523,3 +523,10 @@ def format_supsub(text):
         out.append(subsup.pop())
 
     return ''.join(out)
+
+def drop_trailing_zeros_decimal(num):
+    """ Drops the trailinz zeros from decimal value.
+        Returns a string
+    """
+    out = str(num)
+    return out.rstrip('0').rstrip('.') if '.' in out else out
