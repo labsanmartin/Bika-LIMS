@@ -15,7 +15,7 @@ function AnalysisRequestPublishView() {
 
         'letter': {
                 dimensions: [216, 279],
-                margins:    [20, 20, 20, 20] },
+                margins:    [20, 20, 12, 20] },
     };
 
     /**
