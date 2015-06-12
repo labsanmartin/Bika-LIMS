@@ -11,11 +11,11 @@ function AnalysisRequestPublishView() {
     var papersize = {
         'A4': {
                 dimensions: [210, 297],
-                margins:    [20, 20, 30, 20] },
+                margins:    [20, 20, 20, 20] },
 
         'letter': {
                 dimensions: [216, 279],
-                margins:    [20, 20, 30, 20] },
+                margins:    [20, 20, 20, 20] },
     };
 
     /**
