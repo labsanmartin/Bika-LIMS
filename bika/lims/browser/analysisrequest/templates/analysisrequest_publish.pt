@@ -15,7 +15,7 @@
 <head>
     <div tal:replace="structure provider:plone.resourceregistries.scripts" />
 </head>
-<body class="A4" data-layout="A4">
+<body class="letter" data-layout="letter">
     <div id='ar_publish_container'>
         <div id="ar_publish_header" tal:condition="python:view.showOptions()">
             <div id='options_handler'>
@@ -30,8 +30,8 @@
                 &nbsp;&nbsp;&nbsp;
                 <label for="sel_layout" i18n:translate="">Layout</label>
                 <select id="sel_layout" name="sel_layout">
-                    <option value="A4" selected>DIN-A4 (210 x 297 mm)</option>
-                    <option value="letter">Letter size (216 x 279mm)</option>
+                    <option value="A4">DIN-A4 (210 x 297 mm)</option>
+                    <option value="letter" selected>Letter size (216 x 279mm)</option>
                 </select><br/>
                 <input type="checkbox" name="qcvisible" id='qcvisible' value="0"><span i18n:translate="">Show QC Analyses</span><br/>
                 <input type="checkbox" name="hvisible" id='hvisible' value="0"><span i18n:translate="">Show Hidden Analyses</span>
