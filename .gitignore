@@ -30,3 +30,5 @@ parts
 report.html
 selenium-screenshot*
 Thumbs.db
+var
+tags

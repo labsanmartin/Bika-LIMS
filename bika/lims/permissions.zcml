@@ -138,4 +138,9 @@
 <permission id="bika.lims.CloseBatch" title="BIKA: Close Batch"/>
 <permission id="bika.lims.ReopenBatch" title="BIKA: Reopen Batch"/>
 
+# SamplingRound specific permissions
+# ----------------------------------------------
+<permission id="bika.lims.CloseSamplingRound" title="BIKA: Close SamplingRound"/>
+<permission id="bika.lims.ReopenSamplingRound" title="BIKA: Reopen SamplingRound"/>
+
 </configure>

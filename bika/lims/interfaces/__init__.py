@@ -267,17 +267,32 @@ class IInstrumentTypes(Interface):
 
 
 class IAnalysisSpecs(Interface):
+    ""
+
+
+class IAnalysisProfile(Interface):
+    ""
+
+
+class IAnalysisProfile(Interface):
 
     ""
 
 
 class IAnalysisProfiles(Interface):
+    ""
+
+
+class IARTemplate(Interface):
+    ""
+
+
+class IARTemplate(Interface):
 
     ""
 
 
 class IARTemplates(Interface):
-
     ""
 
 
@@ -350,6 +365,8 @@ class ISRTemplates(Interface):
 
     ""
 
+class ISamplingRoundTemplate(Interface):
+    ""
 
 class ISupplier(Interface):
 
@@ -543,15 +560,13 @@ class ISetupDataImporter(Interface):
 
 class IARImportFolder(Interface):
 
-    "Marker interface for a folder that can list ARImports"
+    """Marker interface for a folder that contains ARImports
+    """
 
 class IARImport(Interface):
 
-    "Marker interface for an ARImport"
-
-class IARImportItem(Interface):
-
-    "Marker interface for an ARImport"
+    """Marker interface for an ARImport
+    """
 
 class IPricelist(Interface):
     "Folder view marker for Pricelist"
