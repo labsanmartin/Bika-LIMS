@@ -177,11 +177,11 @@ class AnalysisRequestPublishView(BrowserView):
                 'composite': ar.getComposite(),
                 'report_drymatter': ar.getReportDryMatter(),
                 'invoice_exclude': ar.getInvoiceExclude(),
-                'date_received': self.ulocalized_time(ar.getDateReceived(), long_format=1),
+                'date_received': self.ulocalized_time(ar.getDateReceived(), long_format=0),
                 'remarks': ar.getRemarks(),
                 'member_discount': ar.getMemberDiscount(),
-                'date_sampled': self.ulocalized_time(ar.getDateSampled(), long_format=1),
-                'date_published': self.ulocalized_time(DateTime(), long_format=1),
+                'date_sampled': self.ulocalized_time(ar.getDateSampled(), long_format=0),
+                'date_published': self.ulocalized_time(DateTime(), long_format=0),
                 'invoiced': ar.getInvoiced(),
                 'late': ar.getLate(),
                 'subtotal': ar.getSubtotal(),
@@ -635,7 +635,7 @@ class AnalysisRequestPublishView(BrowserView):
             for dept in departments[mngr]:
                 if final_depts:
                     final_depts += ', '
-                final_depts += dept
+                final_depts += to_utf8(dept)
             managers['dict'][mngr]['departments'] = final_depts
 
         return managers
