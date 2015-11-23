@@ -1,6 +1,7 @@
 LIMS-1941: Error on manage_results view due to Instruments validity check
 LIMS-1867: Auto-header, auto-footer and auto-pagination in results reports
 LIMS-1743: Reports: ISO (A4) or ANSI (letter) pdf report size
+LIMS-2149: Cannot access to a Worksheet
 3.1.8 (2015-06-03)
 ------------------
 LIMS-1773: Instrument. Thermo Fisher ELISA Spectrophotometer
@@ -747,4 +748,3 @@ http://plone.org/documentation/manual/upgrade-guide
  - Added CHANGES.txt and README.txt
  - Added windows batch script for ID server
    (scripts/start-id-server.bat)
-
