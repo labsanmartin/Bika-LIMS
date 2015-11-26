@@ -5,6 +5,7 @@ LIMS-1743: Reports: ISO (A4) or ANSI (letter) pdf report size
 3.1.10 (unreleased)
 -------------------
 - Dashboard: replace multi-bar charts by stacked-bar charts
+LIMS-1989: Retracting a published AR fails if one or more ASs has been retracted before publishing
 LIMS-2071: Can't generate Invoice Batch/Monthly Statements
 WINE-71: Instrument. BBK WS export to FIA fails
 WINE-72: Instrument. BBK WineScan Auto Import fails
@@ -37,6 +38,8 @@ LIMS-2134: Inactive services appear in AR Create
 LIMS-2139: WS Blank and Control Selection renderes whole page
 LIMS-2156: Ignore blank index values when calculating ReferenceAnalysesGroupID
 LIMS-2157: Cancelled ARs appear in AR listing inside Batches
+LIMS-2042: Horiba ICP: Missing 'DefaultResult' for imported rows
+LIMS-2030: Assign ARs in alphabetical ID order to WS
 
 3.1.9 (2015-10-8)
 ------------------
