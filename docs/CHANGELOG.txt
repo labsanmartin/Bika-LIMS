@@ -4,7 +4,10 @@ LIMS-1743: Reports: ISO (A4) or ANSI (letter) pdf report size
 3.1.9 (unreleased)
 3.1.10 (unreleased)
 -------------------
+- Updated Plone to 4.3.7
 - Dashboard: replace multi-bar charts by stacked-bar charts
+LIMS-2177: template_set error when no template has been selected
+HEALTH-410: AR Create. Auto-complete Contact field if only 1
 LIMS-1917: Inconsistencies related to significant digits in uncertainties
 LIMS-2143: Statements vs Invoices
 LIMS-1989: Retracting a published AR fails if one or more ASs has been retracted before publishing
@@ -45,6 +48,8 @@ LIMS-2030: Assign ARs in alphabetical ID order to WS
 LIMS-2167: Cannot assign a QC analysis to an invalid instrument
 LIMS-2067: Prevent initial method/instrument query for each analysis
 WINE-82: Ignore invalid entry in Sample field during AR creation
+LIMS-1717: Workflow transitions in edit context do not take effect
+WINE-111: Do not attempt formatting of 'nan' analysis result values
 
 3.1.9 (2015-10-8)
 ------------------
