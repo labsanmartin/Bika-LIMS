@@ -139,14 +139,14 @@ class ISamplingRound(model.Schema):
         department = schema.Choice(
                 title=_(u"Department"),
                 description=_(u"The lab department responsible for the sampling round"),
-                required=True,
+                required=False,#For Leo
                 source=Departments()
                 )
 
         sampling_freq = schema.Int(
                 title=_(u"Sampling frequency"),
                 description=_(u"The number of days between recurring field trips"),
-                required=True,
+                required=False, #For Leo
                 default=7,
                 )
 
