@@ -6,6 +6,7 @@ LIMS-1743: Reports: ISO (A4) or ANSI (letter) pdf report size
 3.1.11 (unreleased)
 3.1.x Long Term Support (LTS)
 -----------------------------
+LIMS-2212: Sampling round- Sampling round templates show all system analysis request templates
 LIMS-2209: error in manage analyises
 LIMS-2015: Column spacing on Client look-up
 LIMS-1807: Validation for Start Date - End date relationship while creating invoices and price lists
