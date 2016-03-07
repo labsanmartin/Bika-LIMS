@@ -9,6 +9,8 @@ LIMS-1743: Reports: ISO (A4) or ANSI (letter) pdf report size
 LIMS-2215: Decimal mark not working
 LIMS-2212: Sampling round- Sampling round templates show all system analysis request templates
 LIMS-2209: error in manage analyises
+LIMS-2203: 'Comma' as decimal mark doesnt work
+LIMS-2212: Sampling round- Sampling round templates show all system analysis request templates
 LIMS-2209: error in manage analyises
 LIMS-1917: Inconsistencies related to significant digits in uncertainties
 LIMS-2015: Column spacing on Client look-up
