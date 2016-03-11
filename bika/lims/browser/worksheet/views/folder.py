@@ -24,6 +24,7 @@ import logging
 import plone
 import json
 import zope
+import logging
 
 class FolderView(BikaListingView):
 
@@ -296,7 +297,7 @@ class FolderView(BikaListingView):
 
             priority = obj.getPriority()
             items[x]['Priority'] = ''
-            
+
             instrument = obj.getInstrument()
             items[x]['Instrument'] = instrument and instrument.Title() or ''
 
