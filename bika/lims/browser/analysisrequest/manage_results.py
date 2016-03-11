@@ -77,14 +77,8 @@ class AnalysisRequestManageResultsView(AnalysisRequestViewView):
         invalid = []
         ans = self.context.getAnalyses(full_objects=True)
         for an in ans:
-            try:
+            if hasattr(an, 'getObject'):
                 an = an.getObject()
-            except:
-                # Fixes the mystic error LIMS-1941.
-                # https://jira.bikalabs.com/browse/LIMS-1941
-                import traceback
-                logger.error(traceback.format_exc())
-                continue
                 
             valid = an.isInstrumentValid()
             if not valid:
