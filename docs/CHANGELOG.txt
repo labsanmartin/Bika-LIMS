@@ -7,6 +7,7 @@ LIMS-1743: Reports: ISO (A4) or ANSI (letter) pdf report size
 3.1.x Long Term Support (LTS)
 -----------------------------
 LIMS-2216: Results below LDL are not displayed in reports
+LIMS-2217: Specifications are not set in analyses on Analysis Request creation
 LIMS-2215: Decimal mark not working
 LIMS-2212: Sampling round- Sampling round templates show all system analysis request templates
 LIMS-2209: error in manage analyises
