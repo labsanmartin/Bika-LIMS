@@ -340,7 +340,7 @@ class AnalysisResultsImporter(Logger):
         rawacodes = self._parser.getAnalysisKeywords()
         exclude = self.getKeywordsToBeExcluded()
         for acode in rawacodes:
-            if acode in exclude:
+            if acode in exclude or not acode:
                 continue
             service = self.bsc(getKeyword=acode)
             if not service:
@@ -428,13 +428,13 @@ class AnalysisResultsImporter(Logger):
                            if analysis.getKeyword() == acode]
 
                     if len(ans) > 1:
-                        self.err("More than one analyses found for ${object_id} and ${analysis_keyword)",
+                        self.err("More than one analyses found for ${object_id} and ${analysis_keyword}",
                                  mapping={"object_id": objid,
                                           "analysis_keyword": acode})
                         continue
 
                     elif len(ans) == 0:
-                        self.err("No analyses found for ${object_id} and ${analysis_keyword)",
+                        self.err("No analyses found for ${object_id} and ${analysis_keyword}",
                                  mapping={"object_id": objid,
                                           "analysis_keyword": acode})
                         continue

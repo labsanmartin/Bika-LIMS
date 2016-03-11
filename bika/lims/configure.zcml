@@ -29,7 +29,6 @@
   <include package=".jsonapi" />
   <include package=".locales" />
   <include package=".monkey" />
-  <include package=".querystring" />
   <include package=".search" />
   <include package=".subscribers" />
   <include package=".vocabularies" />
@@ -65,12 +64,6 @@
     permission="zope.Public"
     layer="bika.lims.interfaces.IBikaLIMS"
   />
-
-    <subscriber
-      for="*
-           Products.DCWorkflow.interfaces.IAfterTransitionEvent"
-      handler="bika.lims.workflow.AfterTransitionEventHandler"
-    />
 
   <browser:resource
       file="skins/bika/logo.png"

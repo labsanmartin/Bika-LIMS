@@ -178,6 +178,26 @@ class TestManualUncertainty(BikaFunctionalTestCase):
         self.assertEqual(fe.getService().getPrecision(), 2)
         self.assertEqual(fe.getFormattedResult(), '25.52')
 
+    def test_get_significant_digits(self):
+        # testing the function bika.lims.utils.analysis.get_significant_digits()
+        from bika.lims.utils.analysis import get_significant_digits
+        self.assertEqual(get_significant_digits('0'), 0)
+        self.assertEqual(get_significant_digits('0.22'), 1)
+        self.assertEqual(get_significant_digits('1.34'), 0)
+        self.assertEqual(get_significant_digits('0.0021'), 3)
+        self.assertEqual(get_significant_digits('2'), 0)
+        self.assertEqual(get_significant_digits('22'), 0)
+
+    def test_format_decimal_mark(self):
+        # testing the function bika.lims.utils.analysis.get_significant_digits()
+        from bika.lims.utils import formatDecimalMark
+        self.assertEqual(formatDecimalMark(1), '1')
+        self.assertEqual(formatDecimalMark(1.2), '1.2')
+        self.assertEqual(formatDecimalMark('1.34'), '1.34')
+        self.assertEqual(formatDecimalMark('0.0021',decimalmark=','), '0,0021')
+        self.assertEqual(formatDecimalMark('2'), '2')
+        self.assertEqual(formatDecimalMark('< 2.1', decimalmark=','),'< 2,1')
+        self.assertEqual(formatDecimalMark('> 2.1', decimalmark=','),'> 2,1')
 
 def test_suite():
     suite = unittest.TestSuite()

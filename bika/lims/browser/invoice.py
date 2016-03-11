@@ -23,6 +23,7 @@ class InvoiceView(BrowserView):
         # Gather relted objects
         batch = context.aq_parent
         client = context.getClient()
+        analysis_request = context.getAnalysisRequest() if context.getAnalysisRequest() else None
         # Gather general data
         self.invoiceId = context.getId()
         self.invoiceDate = self.ulocalized_time(context.getInvoiceDate())
@@ -35,6 +36,7 @@ class InvoiceView(BrowserView):
         self.batchRange = "%s to %s" % (start, end)
         # Gather client data
         self.clientName = client.Title()
+        self.clientURL = client.absolute_url()
         self.clientPhone = client.getPhone()
         self.clientFax = client.getFax()
         self.clientEmail = client.getEmailAddress()
@@ -45,6 +47,8 @@ class InvoiceView(BrowserView):
         self.symbol = locale.numbers.currencies[self.currency].symbol
         # Get an available client address in a preferred order
         self.clientAddress = None
+        # A list with the items and its invoice values to render in template
+        self.items = []
         addresses = (
             client.getBillingAddress(),
             client.getPostalAddress(),
@@ -56,14 +60,22 @@ class InvoiceView(BrowserView):
                 break
         # Gather the line items
         items = context.invoice_lineitems
-        self.items = [{
-            'invoiceDate': self.ulocalized_time(item['ItemDate']),
-            'description': item['ItemDescription'],
-            'orderNo': item['OrderNumber'],
-            'subtotal': item['Subtotal'],
-            'VATAmount': item['VATAmount'],
-            'total': item['Total'],
-        } for item in items]
+        for item in items:
+            invoice_data = {
+                'invoiceDate': self.ulocalized_time(item.get('ItemDate', '')),
+                'description': item.get('ItemDescription', ''),
+                'orderNo': item.get('OrderNumber', ''),
+                'subtotal': '%0.2f' % item.get('Subtotal', ''),
+                'VATAmount': '%0.2f' % item.get('VATAmount', ''),
+                'total': '%0.2f' % item.get('Total', ''),
+            }
+            if item.get('AnalysisRequest', ''):
+                    invoice_data['orderNoURL'] = item['AnalysisRequest'].absolute_url()
+            elif item.get('SupplyOrder', ''):
+                    invoice_data['orderNoURL'] = item['SupplyOrder'].absolute_url()
+            else:
+                invoice_data['orderNoURL'] = ''
+            self.items.append(invoice_data)
         # Render the template
         return self.template()
 

@@ -34,7 +34,6 @@
 <permission id="bika.lims.permissions.AddSampleMatrix" title="BIKA: Add SampleMatrix"/>
 <permission id="bika.lims.permissions.AddSamplePartition" title="BIKA: Add SamplePartition"/>
 <permission id="bika.lims.permissions.AddSamplingDeviation" title="BIKA: Add SamplingDeviation"/>
-<permission id="bika.lims.permissions.AddQuery" title="BIKA: Add Query"/>
 <permission id="bika.lims.permissions.AddSRTemplate" title="BIKA: Add SRTemplate"/>
 <permission id="bika.lims.permissions.AddSubGroup" title="BIKA: Add Sub-group"/>
 <permission id="bika.lims.DispatchOrder" title="BIKA: Dispatch Order"/>
@@ -49,7 +48,7 @@
 <permission id="bika.lims.ManageWorksheets" title="BIKA: Manage Worksheets"/>
 <permission id="bika.lims.ManageAnalysisRequests" title="BIKA: Manage Analysis Requests"/>
 <permission id="bika.lims.ManageSamples" title="BIKA: Manage Samples"/>
-<permission id="bika.lims.ManageSuppliers" title="BIKA: Manage Suppliers"/>
+<permission id="bika.lims.ManageSuppliers" title="BIKA: Manage Reference Suppliers"/>
 <permission id="bika.lims.ManageReference" title="BIKA: Manage Reference"/>
 <permission id="bika.lims.ManagePricelists" title="BIKA: Manage Pricelists"/>
 <permission id="bika.lims.PostInvoiceBatch" title="BIKA: Post Invoice batch"/>
@@ -132,10 +131,20 @@
 # Allows access to 'Edit' and 'Contacts' tabs from Client View
 <permission id="bika.lims.EditClient" title="BIKA: Edit Client"/>
 
+# Manage Supply Orders
+# ----------------------------------------------
+# Allows access to 'Supply Orders' tab in Client context
+<permission id="bika.lims.ManageSupplyOrders" title="BIKA: Manage Supply Orders"/>
+
 # Batch specific permissions
 # ----------------------------------------------
 <permission id="bika.lims.EditBatch" title="BIKA: Edit Batch"/>
 <permission id="bika.lims.CloseBatch" title="BIKA: Close Batch"/>
 <permission id="bika.lims.ReopenBatch" title="BIKA: Reopen Batch"/>
+
+# SamplingRound specific permissions
+# ----------------------------------------------
+<permission id="bika.lims.CloseSamplingRound" title="BIKA: Close SamplingRound"/>
+<permission id="bika.lims.ReopenSamplingRound" title="BIKA: Reopen SamplingRound"/>
 
 </configure>

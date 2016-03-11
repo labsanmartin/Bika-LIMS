@@ -2,7 +2,6 @@
 <object name="portal_factory" meta_type="Plone Factory Tool">
  <factorytypes>
   <type portal_type="ARImport"/>
-  <type portal_type="ARImportItem"/>
   <type portal_type="ARPriority"/>
   <type portal_type="ARReport"/>
   <type portal_type="AnalysisProfile"/>
@@ -38,7 +37,6 @@
   <type portal_type="Method"/>
   <type portal_type="SupplyOrder"/>
   <type portal_type="Preservation"/>
-  <type portal_type="Query"/>
   <type portal_type="ReferenceDefinition"/>
   <type portal_type="ReferenceSample"/>
   <type portal_type="Pricelist"/>

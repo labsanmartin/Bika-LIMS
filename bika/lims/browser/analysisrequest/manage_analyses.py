@@ -39,7 +39,15 @@ class AnalysisRequestAnalysesView(BikaListingView):
         self.show_select_column = True
         self.table_only = True
         self.show_select_all_checkbox = False
-        self.pagesize = 0
+        self.pagesize = 999999
+
+        self.categories = []
+        self.do_cats = self.context.bika_setup.getCategoriseAnalysisServices()
+        if self.do_cats:
+            self.show_categories = True
+            self.expand_all_categories = False
+            self.ajax_categories = True
+            self.category_index = 'getCategoryTitle'
 
         self.columns = {
             'Title': {'title': _('Service'),
@@ -207,9 +215,9 @@ class AnalysisRequestAnalysesView(BikaListingView):
                 items[x]['Partition'] = part.Title()
                 spec = self.get_spec_from_ar(self.context,
                                              analysis.getService().getKeyword())
-                items[x]["min"] = spec["min"]
-                items[x]["max"] = spec["max"]
-                items[x]["error"] = spec["error"]
+                items[x]["min"] = spec.get("min",'')
+                items[x]["max"] = spec.get("max",'')
+                items[x]["error"] = spec.get("error",'')
                 # Add priority premium
                 items[x]['Price'] = analysis.getPrice()
                 priority = analysis.getPriority()

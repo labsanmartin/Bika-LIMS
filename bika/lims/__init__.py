@@ -5,6 +5,7 @@ __version__ = pkg_resources.get_distribution("bika.lims").version
 # import this to create messages in the bika domain.
 from zope.i18nmessageid import MessageFactory
 bikaMessageFactory = MessageFactory('bika')
+_ = MessageFactory('bika.lims')
 from Products.Archetypes import PloneMessageFactory as PMF
 
 # import this to log messages
@@ -44,7 +45,6 @@ def initialize(context):
     from content.analysisservice import AnalysisService
     from content.analysisspec import AnalysisSpec
     from content.arimport import ARImport
-    from content.arimportitem import ARImportItem
     from content.arpriority import ARPriority
     from content.analysisprofile import AnalysisProfile
     from content.arreport import ARReport
@@ -86,8 +86,6 @@ def initialize(context):
     from content.preservation import Preservation
     from content.pricelist import Pricelist
     from content.pricelistfolder import PricelistFolder
-    from content.queryfolder import QueryFolder
-    from content.query import Query
     from content.referenceanalysis import ReferenceAnalysis
     from content.referencedefinition import ReferenceDefinition
     from content.referencesample import ReferenceSample

@@ -29,7 +29,7 @@ class SRTemplateARTemplatesView(BikaListingView):
         self.show_select_column = True
         self.show_categories = True
         self.expand_all_categories = True
-        self.pagesize = 0
+        self.pagesize = 999999
         self.allow_edit = allow_edit
         self.form_id = "artemplates"
         self.columns = {
@@ -51,13 +51,20 @@ class SRTemplateARTemplatesView(BikaListingView):
 
     def folderitems(self):
         items = BikaListingView.folderitems(self)
+        clientUID = self.context.aq_parent.aq_parent.UID()
+        out_items = []
         for item in items:
             if not item.has_key('obj'): continue
+            if item['obj'].getClientUID() and item['obj'].getClientUID()!=clientUID:
+                # Only display client's and lab's arts
+                continue
             obj = item['obj']
             title_link = "<a href='%s'>%s</a>" % (item['url'], item['title'])
             item['replace']['Title'] = title_link
             item['selected'] = item['uid'] in self.selected
-        return items
+            out_items.append(item)
+
+        return out_items
 
 
 class SRTemplateARTemplatesWidget(TypesWidget):

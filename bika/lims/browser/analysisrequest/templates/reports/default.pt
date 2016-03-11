@@ -208,7 +208,7 @@
     <h1 i18n:translate="">Results</h1>
     <tal:poc tal:repeat="poc python:categanalyses.keys()">
     <h2 tal:content="poc"></h2>
-    <tal:cat tal:repeat="cat python:sorted(categanalyses.get(poc,{}).keys())">
+    <tal:cat tal:repeat="cat python:view.sorted_by_sort_key(categanalyses.get(poc,{}).keys())">
     <table>
         <thead>
             <tr>
@@ -253,8 +253,8 @@
                     <span class="result" tal:content="structure analysis/formatted_result">23</span>
                     <span class="units" tal:content="structure analysis/formatted_unit|nothing"></span>
                 </td>
-                <td class="dryresult" tal:condition="python: reportdrymatter and analysis/resultdm">
-                    <span tal:content="structure string:${analysis/resultdm}  ${analysis/formatted_unit|nothing}">23</span>
+                <td class="dryresult" tal:condition="python: reportdrymatter and getattr(analysis, 'resultdm', None)">
+                    <span tal:content="structure string:${analysis/resultdm} ${analysis/formatted_unit|nothing}">23</span>
                 </td>
                 <td class="specs">
                     <span tal:condition="analysis/uncertainty"
@@ -280,20 +280,16 @@
     </tal:cat>
     </tal:poc>
 </div>
-<tal:resint define="ri analysisrequest/resultsinterpretationdepts"
-            condition="ri">
-<div>
-    <h1 i18n:translate="">Result interpretation</h1>
-</div>
-<tal:ris repeat="rid python:ri.keys()">
-<div class='resultsinterpretation'>
-    <h2 tal:content="rid" tal:condition="rid"></h2>
-    <div>
+<div id="section-resultsinterpretation"
+    tal:define="ri python:dict([(k,v) for (k,v) in analysisrequest.get('resultsinterpretationdepts',{}).items() if v and v.get('richtext','')]);"
+    tal:condition="python: ri">
+    <h1 i18n:translate="">Results interpretation</h1>
+    <tal:ris repeat="rid python:ri.keys()">
+        <h2 tal:content="rid" tal:condition="rid"></h2>
         <div tal:content="structure python:ri.get(rid,{}).get('richtext','')"></div>
-    </div>
+        <p>&nbsp;</p>
+    </tal:ris>
 </div>
-</tal:ris>
-</tal:resint>
 <!-- QC Results section -->
 <div id="section-qcresults" tal:condition="python:hasqcanalyses and showqcanalyses">
     <h1 i18n:translate="">QC Results</h1>
@@ -334,7 +330,7 @@
                     <span class="result" tal:content="structure analysis/formatted_result">23</span>
                     <span class="units" tal:content="structure analysis/formatted_unit|nothing"></span>
                 </td>
-                <td class="dryresult" tal:condition="python: reportdrymatter and analysis/resultdm">
+                <td class="dryresult" tal:condition="python: reportdrymatter and getattr(analysis, 'resultdm', None)">
                     <span tal:content="structure string:${analysis/resultdm}  ${analysis/formatted_unit|nothing}">23</span>
                 </td>
                 <td class="specs">
@@ -377,7 +373,7 @@
         <li tal:define="file python:attachment.getAttachmentFile();
                         filename file/filename | nothing;
                         filesize file/get_size | python:file and len(file) or 0;
-                        icon file/getBestIcon | nothing">
+                        icon file/icon | nothing">
             <a title="Click to download"
                tal:attributes="href string:${attachment/absolute_url}/at_download/AttachmentFile"
                tal:content="attachment/Title">Filename</a>
@@ -394,7 +390,7 @@
         <tr tal:define="file python:anat.getAttachmentFile();
                         filename file/filename | nothing;
                         filesize file/get_size | python:file and len(file) or 0;
-                        icon file/getBestIcon | nothing">
+                        icon file/icon | nothing">
             <td tal:content="python: analysis.getKeyword()">Total Vit D2 + D3</td>
             <td>
                 <a title="Click to download"

@@ -31,9 +31,9 @@ AddSamplePartition = 'BIKA: Add SamplePartition'
 AddSamplePoint = 'BIKA: Add SamplePoint'
 AddStorageLocation = 'BIKA: Add StorageLocation'
 AddSamplingDeviation = 'BIKA: Add SamplingDeviation'
+AddSamplingRound = 'BIKA: Add SamplingRound'
 AddSRTemplate = 'BIKA: Add SRTemplate'
 AddSubGroup = 'BIKA: Add Sub-group'
-AddQuery = 'BIKA: Add Query'
 
 # Default Archetypes Add Permission
 ADD_CONTENT_PERMISSION = AddPortalContent
@@ -55,8 +55,8 @@ ADD_CONTENT_PERMISSIONS = {
     'SampleMatrix': AddSampleMatrix,
     'SamplePartition': AddSamplePartition,
     'SamplingDeviation': AddSamplingDeviation,
+    'SamplingRound': AddSamplingRound,
     'SubGroup': AddSubGroup,
-    'Query': AddQuery,
 }
 
 # Very Old permissions:
@@ -145,11 +145,22 @@ EditSamplePartition = 'BIKA: Edit Sample Partition'
 # Allows access to 'Edit' and 'Contacts' tabs from Client View
 EditClient = 'BIKA: Edit Client'
 
+# Manage Supply Orders
+# ----------------------------------------------
+# Allows access to 'Supply Orders' tab in Client context
+ManageSupplyOrders = 'BIKA: Manage Supply Orders'
+
+
 # Batch-specific permissions
 # ----------------------------------------------
 EditBatch = 'BIKA: Edit Batch'
 CloseBatch = 'BIKA: Close Batch'
 ReopenBatch = 'BIKA: Reopen Batch'
+
+# Sampling Round permissions
+# --------------------------
+CloseSamplingRound = 'BIKA: Close SamplingRound'
+ReopenSamplingRound = 'BIKA: Reopen SamplingRound'
 
 # Manage AR Imports
 # ----------------------------------------------

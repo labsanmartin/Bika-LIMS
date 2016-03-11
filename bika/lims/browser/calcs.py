@@ -254,41 +254,25 @@ class ajaxCalculateAnalysisEntry(BrowserView):
                 else:
                     self.alerts[uid] = [alert, ]
 
-        # format result
-        belowmin = False
-        abovemax = False
-        # Some analyses will not have AnalysisSpecs, eg, ReferenceAnalysis
-        if hasattr(analysis, 'getAnalysisSpecs'):
-            specs = analysis.getAnalysisSpecs()
-            specs = specs.getResultsRangeDict() if specs is not None else {}
-            specs = specs.get(analysis.getKeyword(), {})
-            hidemin = specs.get('hidemin', '')
-            hidemax = specs.get('hidemax', '')
-            if Result.get('result', ''):
-                fresult = Result['result']
-                try:
-                    belowmin = hidemin and fresult < float(hidemin) or False
-                except ValueError:
-                    belowmin = False
-                    pass
-                try:
-                    abovemax = hidemax and fresult > float(hidemax) or False
-                except ValueError:
-                    abovemax = False
-                    pass
+        if analysis.portal_type == 'ReferenceAnalysis':
+            # The analysis is a Control or Blank. We might use the
+            # reference results instead other specs
+            uid = analysis.getServiceUID()
+            specs = analysis.aq_parent.getResultsRangeDict().get(uid, {})
 
-        if belowmin is True:
-            Result['formatted_result'] = '< %s' % hidemin
-        elif abovemax is True:
-            Result['formatted_result'] = '> %s' % hidemax
         else:
-            try:
-                Result['formatted_result'] = format_numeric_result(analysis,
-                                                                   Result['result'])
-            except ValueError:
-                # non-float
-                Result['formatted_result'] = Result['result']
+            # Get the specs directly from the analysis. The getResultsRange
+            # function already takes care about which are the specs to be used:
+            # AR, client or lab.
+            specs = analysis.getResultsRange()
 
+        # format result
+        try:
+            Result['formatted_result'] = format_numeric_result(analysis,
+                                                               Result['result'])
+        except ValueError:
+            # non-float
+            Result['formatted_result'] = Result['result']
         # calculate Dry Matter result
         # if parent is not an AR, it's never going to be calculable
         dm = hasattr(analysis.aq_parent, 'getReportDryMatter') and \

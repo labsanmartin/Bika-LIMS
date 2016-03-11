@@ -248,7 +248,7 @@
                     <span class="result" tal:content="structure analysis/formatted_result">23</span>
                     <span class="units" tal:content="structure analysis/formatted_unit|nothing"></span>
                 </td>
-                <td class="dryresult" tal:condition="python: reportdrymatter and analysis/resultdm">
+                <td class="dryresult" tal:condition="python: reportdrymatter and getattr(analysis, 'resultdm', None)">
                     <span tal:content="structure string:${analysis/resultdm}  ${analysis/formatted_unit|nothing}">23</span>
                 </td>
                 <td class="specs">
@@ -312,7 +312,7 @@
         <li tal:define="file python:attachment.getAttachmentFile();
                         filename file/filename | nothing;
                         filesize file/get_size | python:file and len(file) or 0;
-                        icon file/getBestIcon | nothing">
+                        icon file/icon | nothing">
             <a title="Click to download"
                tal:attributes="href string:${attachment/absolute_url}/at_download/AttachmentFile"
                tal:content="attachment/Title">Filename</a>
@@ -329,7 +329,7 @@
         <tr tal:define="file python:anat.getAttachmentFile();
                         filename file/filename | nothing;
                         filesize file/get_size | python:file and len(file) or 0;
-                        icon file/getBestIcon | nothing">
+                        icon file/icon | nothing">
             <td tal:content="python: analysis.getKeyword()">Total Vit D2 + D3</td>
             <td>
                 <a title="Click to download"

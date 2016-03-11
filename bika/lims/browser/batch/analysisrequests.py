@@ -20,12 +20,7 @@ class AnalysisRequestsView(_ARV, _ARAV):
         super(AnalysisRequestsView, self).__init__(context, request)
 
     def contentsMethod(self, contentFilter):
-        #bc = getToolByName(self.context, 'bika_catalog')
-        #import pdb;pdb.set_trace()
-        #if 'BatchUID' not in contentFilter.keys():
-        #    contentFilter['BatchUID'] = self.context.UID()
-        #return bc(contentFilter)
-        return self.context.getBackReferences("AnalysisRequestBatch")
+        return self.context.getAnalysisRequests(**contentFilter)
 
     def __call__(self):
         self.context_actions = {}
@@ -34,7 +29,7 @@ class AnalysisRequestsView(_ARV, _ARAV):
             self.context_actions[self.context.translate(_('Add new'))] = {
                 'url': self.context.absolute_url() + \
                     "/portal_factory/"
-                    "AnalysisRequest/Request new analyses/ar_add?col_count=1",
+                    "AnalysisRequest/Request new analyses/ar_add?ar_count=1",
                 'icon': '++resource++bika.lims.images/add.png'}
 
         return super(AnalysisRequestsView, self).__call__()

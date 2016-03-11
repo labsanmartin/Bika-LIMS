@@ -26,7 +26,7 @@ class BatchBookView(BikaListingView):
         self.show_column_toggles = True
         self.show_select_row = False
         self.show_select_column = True
-        self.pagesize = 0
+        self.pagesize = 999999
         self.form_id = "list"
         self.page_start_index = 0
         self.show_categories = True
@@ -121,11 +121,11 @@ class BatchBookView(BikaListingView):
                 if o not in ars:
                     ars.append(o)
             elif o.portal_type == 'Batch':
-                for ar in o.getAnalysisRequests():
+                for ar in o.getAnalysisRequests(cancellation_state='active'):
                     if ar not in ars:
                         ars.append(ar)
 
-        for ar in self.context.getAnalysisRequests():
+        for ar in self.context.getAnalysisRequests(cancellation_state='active'):
             if ar not in ars:
                 ars.append(ar)
 

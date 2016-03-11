@@ -1,6 +1,7 @@
 from bika.lims.permissions import AddBatch
 from bika.lims.browser.bika_listing import BikaListingView
 from bika.lims import bikaMessageFactory as _
+from bika.lims.config import ManageInvoices
 from bika.lims.utils import t
 from operator import itemgetter
 from plone.app.content.browser.interfaces import IFolderContentsView
@@ -21,6 +22,7 @@ class BatchFolderContentsView(BikaListingView):
             'portal_type': 'Batch',
             'sort_on': 'created',
             'sort_order': 'reverse',
+            'cancellation_state': 'active'
         }
         self.context_actions = {}
         self.icon = self.portal_url + "/++resource++bika.lims.images/batch_big.png"
@@ -42,8 +44,7 @@ class BatchFolderContentsView(BikaListingView):
 
         self.review_states = [  # leave these titles and ids alone
             {'id': 'default',
-             'contentFilter': {'review_state': 'open',
-                               'cancellation_state': 'active'},
+             'contentFilter': {'review_state': 'open'},
              'title': _('Open'),
              'transitions': [{'id': 'close'}, {'id': 'cancel'}],
              'columns': ['Title',
@@ -53,8 +54,7 @@ class BatchFolderContentsView(BikaListingView):
                          'state_title', ]
              },
             {'id': 'closed',
-             'contentFilter': {'review_state': 'closed',
-                               'cancellation_state': 'active'},
+             'contentFilter': {'review_state': 'closed'},
              'title': _('Closed'),
              'transitions': [{'id': 'open'}],
              'columns': ['Title',
@@ -76,7 +76,6 @@ class BatchFolderContentsView(BikaListingView):
             {'id': 'all',
              'title': _('All'),
              'transitions': [],
-             'contentFilter':{},
              'columns': ['Title',
                          'BatchID',
                          'BatchDate',

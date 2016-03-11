@@ -49,6 +49,15 @@ def Priority(instance):
     if priority:
         return priority.getSortKey()
 
+@indexer(IAnalysis)
+def sortable_title_with_sort_key(instance):
+    service = instance.getService()
+    if service:
+        sort_key = service.getSortKey()
+        if sort_key:
+            return "{:010.3f}{}".format(sort_key, service.Title())
+        return service.Title()
+
 schema = BikaSchema.copy() + Schema((
     HistoryAwareReferenceField('Service',
         required=1,
@@ -185,6 +194,7 @@ schema = BikaSchema.copy() + Schema((
         expression = 'context.isInstrumentValid()'
     ),
     FixedPointField('Uncertainty',
+        precision=10,
         widget=DecimalWidget(
             label = _("Uncertainty"),
         ),
@@ -429,10 +439,12 @@ class Analysis(BaseContent):
         return dep_analyses
 
     def setResult(self, value, **kw):
+        """ :value: must be a string
+        """
         # Always update ResultCapture date when this field is modified
         self.setResultCaptureDate(DateTime())
         # Only allow DL if manually enabled in AS
-        val = value
+        val = str(value)
         if val and (val.strip().startswith('>') or val.strip().startswith('<')):
             self.Schema().getField('DetectionLimitOperand').set(self, None)
             oper = '<' if val.strip().startswith('<') else '>'
@@ -533,15 +545,15 @@ class Analysis(BaseContent):
                 rr = an.aq_parent.getResultsRange()
                 rr = [r for r in rr if r.get('keyword', '') == an.getKeyword()]
                 rr = rr[0] if rr and len(rr) > 0 else {}
-            if specification == 'ar' or rr:
+                if rr:
+                    rr['uid'] = self.UID()
+        if not rr:
+            # Let's try to retrieve the specs from client and/or lab
+            specs = an.getAnalysisSpecs(specification)
+            rr = specs.getResultsRangeDict() if specs else {}
+            rr = rr.get(an.getKeyword(), {}) if rr else {}
+            if rr:
                 rr['uid'] = self.UID()
-                return rr
-
-        specs = an.getAnalysisSpecs(specification)
-        rr = specs.getResultsRangeDict() if specs else {}
-        rr = rr.get(an.getKeyword(), {}) if rr else {}
-        if rr:
-            rr['uid'] = self.UID()
         return rr
 
     def getAnalysisSpecs(self, specification=None):
@@ -684,7 +696,16 @@ class Analysis(BaseContent):
             if hasattr(self.aq_parent, 'getPriority') else None
 
     def getPrice(self):
-        price = self.getService().getPrice()
+        """
+        The function obtains the analysis' price without VAT and without member discount
+        :return: the price (without VAT or Member Discount) in decimal format
+        """
+        analysis_request = self.aq_parent
+        client = analysis_request.aq_parent
+        if client.getBulkDiscount():
+            price = self.getService().getBulkPrice()
+        else:
+            price = self.getService().getPrice()
         priority = self.getPriority()
         if priority and priority.getPricePremium() > 0:
             price = Decimal(price) + (
@@ -693,11 +714,20 @@ class Analysis(BaseContent):
         return price
 
     def getVATAmount(self):
+        """
+        Compute the VAT amount without member discount.
+        :return: the result as a float
+        """
         vat = self.getService().getVAT()
         price = self.getPrice()
         return float(price) * float(vat) / 100
 
     def getTotalPrice(self):
+        """
+        Obtain the total price without client's member discount. The function keeps in mind the
+        client's bulk discount.
+        :return: the result as a float
+        """
         return float(self.getPrice()) + float(self.getVATAmount())
 
     def isInstrumentValid(self):
@@ -783,7 +813,7 @@ class Analysis(BaseContent):
         if service.getInstrumentEntryOfResults() == True:
             uids = service.getRawInstruments()
 
-        elif service.getManualEntryOfResults == True:
+        elif service.getManualEntryOfResults() == True:
             meths = self.getAllowedMethods(False)
             for meth in meths:
                 uids += meth.getInstrumentUIDs()
@@ -802,7 +832,7 @@ class Analysis(BaseContent):
             set yet an Instrument, looks to the Service
         """
         instr = self.getInstrument() \
-            if self.getInstrument else self.getDefaultInstrument()
+            if self.getInstrument() else self.getDefaultInstrument()
         return instr.getMethod() if instr else None
 
     def getFormattedResult(self, specs=None, decimalmark='.', sciformat=1):
@@ -899,9 +929,10 @@ class Analysis(BaseContent):
             # Drop trailing zeros from decimal
             udl = drop_trailing_zeros_decimal(udl)
             return formatDecimalMark('> %s' % udl, decimalmark)
-
         # Render numerical values
-        return formatDecimalMark(format_numeric_result(self, result, sciformat=sciformat), decimalmark=decimalmark)
+        return format_numeric_result(self, self.getResult(),
+                        decimalmark=decimalmark,
+                        sciformat=sciformat)
 
     def getPrecision(self, result=None):
         """
@@ -922,7 +953,7 @@ class Analysis(BaseContent):
             uncertainty = self.getUncertainty(result)
             if uncertainty == 0:
                 return 1
-            return abs(get_significant_digits(uncertainty))
+            return get_significant_digits(uncertainty)
         else:
             return serv.getPrecision(result)
 
@@ -1013,7 +1044,12 @@ class Analysis(BaseContent):
         # Check for self-submitted Analysis.
         user_id = getSecurityManager().getUser().getId()
         self_submitted = False
-        review_history = workflow.getInfoFor(self, "review_history")
+        try:
+            # https://jira.bikalabs.com/browse/LIMS-2037;
+            # Sometimes the workflow history is inexplicably missing!
+            review_history = workflow.getInfoFor(self, "review_history")
+        except WorkflowException:
+            return True
         review_history = self.reverseList(review_history)
         for event in review_history:
             if event.get("action") == "submit":
@@ -1477,4 +1513,3 @@ class Analysis(BaseContent):
 
 
 atapi.registerType(Analysis, PROJECTNAME)
-
