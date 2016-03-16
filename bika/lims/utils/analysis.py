@@ -87,6 +87,10 @@ def _format_decimal_or_sci(result, precision, threshold, sciformat):
         # positions is above the threshold
         sig_digits = int(math.log(abs(float(result)),10)) if abs(float(result)) >= 10 else 0
         sci = sig_digits > 0
+    elif sig_digits == 0 and abs(float(result)) > 0:
+        # A positive number. We need to apply sci not?
+        sig_digits = int(math.log(abs(float(result)),10)) if abs(float(result)) >= 10 else 0
+        sci = (sig_digits+1) >= threshold
 
     formatted = ''
     if sci:
