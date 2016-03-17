@@ -544,7 +544,9 @@ class AnalysisRequestPublishView(BrowserView):
         andict['specs'] = specs
         scinot = self.context.bika_setup.getScientificNotationReport()
         fresult =  analysis.getFormattedResult(specs=specs, sciformat=int(scinot), decimalmark=decimalmark)
-        andict['formatted_result'] = cgi.escape(fresult);
+        fresult = fresult.replace('< ', '&lt; ')
+        fresult = fresult.replace('> ', '&gt; ')
+        andict['formatted_result'] = fresult;
 
         fs = ''
         if specs.get('min', None) and specs.get('max', None):
