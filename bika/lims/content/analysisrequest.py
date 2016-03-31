@@ -2496,4 +2496,3 @@ class AnalysisRequest(BaseFolder):
 
 
 atapi.registerType(AnalysisRequest, PROJECTNAME)
-
