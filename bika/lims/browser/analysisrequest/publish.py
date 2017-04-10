@@ -406,8 +406,17 @@ class AnalysisRequestPublishView(BrowserView):
             memail = member.getProperty('email')
             mhomepage = member.getProperty('home_page')
             pc = getToolByName(self, 'portal_catalog')
-            c = pc(portal_type='Contact', getUsername=member.id)
-            c = c[0].getObject() if c else None
+            c_brain = pc(portal_type='LabContact', getUsername=member.id)
+            # Only one LabContact should be found
+            c = None
+            if len(c_brain) == 1:
+                c = c_brain[0].getObject()
+            else:
+                logger.warn(
+                    "Incorrect number of user with the same memberID."
+                    " '{0}' users found with {1} as ID"
+                    .format(len(c_brain), member.id)
+                )
             cfullname = c.getFullname() if c else None
             cemail = c.getEmailAddress() if c else None
             data = {'id': member.id,
