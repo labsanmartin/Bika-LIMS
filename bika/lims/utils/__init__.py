@@ -35,7 +35,11 @@ allow_module('csv')
 def to_utf8(text):
     if text is None:
         text = ''
-    return safe_unicode(text).encode('utf-8')
+    unicode_obj = safe_unicode(text)
+    # If it receives a dictionary or list, it will not work
+    if isinstance(unicode_obj, unicode):
+        return unicode_obj.encode('utf-8')
+    return unicode_obj
 
 
 def to_unicode(text):
