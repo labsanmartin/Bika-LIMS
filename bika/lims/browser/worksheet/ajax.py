@@ -1,4 +1,10 @@
 # coding=utf-8
+
+# This file is part of Bika LIMS
+#
+# Copyright 2011-2016 by it's authors.
+# Some rights reserved. See LICENSE.txt, AUTHORS.txt.
+
 from bika.lims.utils import t
 from operator import itemgetter
 from Products.Archetypes.config import REFERENCE_CATALOG
@@ -60,15 +66,13 @@ class AttachAnalyses():
                 if review_state not in attachable_states:
                     continue
                 parent = analysis.getRequestID()
-                service = analysis.getService()
             elif analysis.portal_type == 'ReferenceAnalysis':
                 if review_state not in attachable_states:
                     continue
                 parent = analysis.aq_parent.Title()
-                service = analysis.getService()
             rows.append({'analysis_uid': analysis.UID(),
                          'slot': analysis_to_slot[analysis.UID()],
-                         'service': service and service.Title() or '',
+                         'service': analysis.Title(),
                          'parent': parent,
                          'type': analysis.portal_type})
 

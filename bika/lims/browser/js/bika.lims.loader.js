@@ -29,7 +29,9 @@ window.bika.lims.controllers =  {
     // Atachments
     ".attachments":
         ['AttachmentsUtils'],
-
+    // Bika Listing Filter Bar
+    "tr.bika_listing_filter_bar":
+        ['BikaListingFilterBarController'],
 
     /** JS objects to be loaded always **/
 
@@ -64,6 +66,8 @@ window.bika.lims.controllers =  {
     ".portaltype-instrumentcertification.template-base_edit":
         ['InstrumentCertificationEditView'],
 
+    ".portaltype-instrument.template-base_edit":
+            ['InstrumentEditView'],
 
     // Bika Setup
     ".portaltype-bikasetup.template-base_edit":
@@ -74,23 +78,29 @@ window.bika.lims.controllers =  {
     ".portaltype-client.template-base_edit":
         ['ClientEditView'],
 
+    "div.overlay #client-base-edit":
+        ['ClientOverlayHandler'],
+
     // Client Sampling Rounds
     ".template-bika-lims-content-samplingsround.portaltype-client":
         ['ClientSamplingRoundAddEditView'],
 
     // Sampling Rounds PrintView
-    ".samplinground-print-form":
-        ['SamplingRoundtPrintView'],
+    "#sr_publish_container":
+        ['SamplingRoundPrintView'],
 
     // Reference Samples
     ".portaltype-referencesample.template-analyses":
         ['ReferenceSampleAnalysesView'],
 
 
-    // Samples
+    // Sample
     ".portaltype-sample":
-        ['SampleView'],
-
+        ['SampleView',
+        'RejectionKickOff'],
+    // Samples fodler
+    ".portaltype-samplesfolder":
+        ['SamplesFolderView'],
 
     // Analysis Request Templates
     ".portaltype-artemplate.template-base_edit":
@@ -100,12 +110,18 @@ window.bika.lims.controllers =  {
     // Analysis Requests
     ".portaltype-analysisrequest":
         ['SampleView',
-         'AnalysisRequestView'],
+         'AnalysisRequestView',
+     ],
+     // Analysis request, but not in ARAdd view
+     ".portaltype-analysisrequest:not(.template-ar_add)":
+        [
+        'RejectionKickOff',],
 
     ".portaltype-analysisrequest.template-base_view":
         ['WorksheetManageResultsView',
          'AnalysisRequestViewView',
-         'AnalysisRequestManageResultsView'],
+         'AnalysisRequestManageResultsView',
+         'RejectionKickOff',],
 
     ".portaltype-analysisrequest.template-manage_results":
         ['WorksheetManageResultsView',
@@ -113,6 +129,11 @@ window.bika.lims.controllers =  {
 
     ".portaltype-analysisrequest.template-analyses":
         ['AnalysisRequestAnalysesView'],
+
+    // Aggregated analyses view
+    ".template-aggregatedanalyses.portaltype-plone-site":
+        ['WorksheetManageResultsView',
+         'AnalysisRequestManageResultsView',],
 
 	// Common and utilities for AR Add forms
 	".portaltype-analysisrequest.template-ar_add": ['AnalysisRequestAddView'],
@@ -126,7 +147,11 @@ window.bika.lims.controllers =  {
 	".analysisrequest_add_by_col": ['AnalysisRequestAddByCol'],
 
     "#ar_publish_container":
-        ['AnalysisRequestPublishView', 'RangeGraph'],
+        ['RangeGraph', 'AnalysisRequestPublishView'],
+
+    // Samples PrintView
+     "#preview_container.samples_print_preview":
+         ['FormPrintView'],
 
     // Supply Orders
     ".portaltype-supplyorder.template-base_edit":
@@ -161,9 +186,17 @@ window.bika.lims.controllers =  {
     ".portaltype-worksheet.template-manage_results":
         ['WorksheetManageResultsView'],
 
+    ".portaltype-worksheettemplate.template-base_edit":
+        ['WorksheetTemplateEdit'],
+
     "#worksheet-printview-wrapper":
         ['WorksheetPrintView'],
 
+    ".portaltype-reflexrule.template-base_edit":
+        ['ReflexRuleEditView'],
+
+    ".template-labcontacts.portaltype-department":
+        ['DepartmentLabContactsView'],
 
     // Reports folder (not AR Reports)
     ".portaltype-reportfolder":
@@ -205,18 +238,11 @@ window.bika.lims.loadControllers = function(all, controllerKeys) {
             controllers[key].forEach(function(js) {
                 if (all == true || $.inArray(key, controllerKeys) >= 0 || $.inArray(js, _bika_lims_loaded_js) < 0) {
                     console.debug('[bika.lims.loader] Loading '+js);
-                    try {
-                        obj = new window[js]();
-                        obj.load();
-                        // Register the object for further access
-                        window.bika.lims[js]=obj;
-                        _bika_lims_loaded_js.push(js);
-                    } catch (e) {
-                       // statements to handle any exceptions
-                       var msg = '[bika.lims.loader] Unable to load '+js+": "+ e.message +"\n"+e.stack;
-                       console.warn(msg);
-                       window.bika.lims.error(msg);
-                    }
+                    obj = new window[js]();
+                    obj.load();
+                    // Register the object for further access
+                    window.bika.lims[js]=obj;
+                    _bika_lims_loaded_js.push(js);
                 }
             });
         }

@@ -1,3 +1,8 @@
+# This file is part of Bika LIMS
+#
+# Copyright 2011-2016 by it's authors.
+# Some rights reserved. See LICENSE.txt, AUTHORS.txt.
+
 from Products.Five.browser.pagetemplatefile import ViewPageTemplateFile
 from bika.lims import bikaMessageFactory as _
 from bika.lims.browser import BrowserView
@@ -52,14 +57,16 @@ class Report(BrowserView):
             analyses = sample.getAnalyses({})
             for analysis in analyses:
                 analysis = analysis.getObject()
+                sd = sample.getSamplingDate()
                 dataline = {'AnalysisKeyword': analysis.getKeyword(),
-                            'AnalysisTitle': analysis.getServiceTitle(),
+                            'AnalysisTitle': analysis.Title(),
                             'SampleID': sample.getSampleID(),
                             'SampleType': sample.getSampleType().Title(),
                             'SampleDateReceived': self.ulocalized_time(
                                 sample.getDateReceived(), long_format=1),
                             'SampleSamplingDate': self.ulocalized_time(
-                                sample.getSamplingDate(), long_format=1)}
+                                sd, long_format=1) if sd else ''
+                            }
                 datalines.append(dataline)
                 analyses_count += 1
 

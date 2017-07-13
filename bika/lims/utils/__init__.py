@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+from AccessControl import getSecurityManager
+# This file is part of Bika LIMS
+#
+# Copyright 2011-2016 by it's authors.
+# Some rights reserved. See LICENSE.txt, AUTHORS.txt.
+
 
 from AccessControl import ModuleSecurityInfo, allow_module
 
@@ -26,6 +32,7 @@ import Globals
 import os
 import re
 import tempfile
+import types
 import urllib2
 
 ModuleSecurityInfo('email.Utils').declarePublic('formataddr')
@@ -191,7 +198,7 @@ def formatDecimalMark(value, decimalmark='.'):
         Assumes that 'value' uses '.' as decimal mark and ',' as
         thousand mark.
         ::value:: is a string
-        ::return:: is a string with the decimal mark if needed
+        ::returns:: is a string with the decimal mark if needed
     """
     # We have to consider the possibility of working with decimals such as
     # X.000 where those decimals are important because of the precission
@@ -257,7 +264,7 @@ def sortable_title(portal, title):
         return ''
 
     def_charset = portal.plone_utils.getSiteEncoding()
-    sortabletitle = title.lower().strip()
+    sortabletitle = str(title.lower().strip())
     # Replace numbers with zero filled numbers
     sortabletitle = num_sort_regex.sub(zero_fill, sortabletitle)
     # Truncate to prevent bloat
@@ -557,3 +564,84 @@ def drop_trailing_zeros_decimal(num):
     """
     out = str(num)
     return out.rstrip('0').rstrip('.') if '.' in out else out
+
+def checkPermissions(permissions=[], obj=None):
+    """
+    Checks if a user has permissions for a given object.
+
+    Args:
+        permissions: The permissions the current user must be compliant with
+        obj: The object for which the permissions apply
+
+    Returns:
+        1 if the user complies with all the permissions for the given object.
+        Otherwise, it returns empty.
+    """
+    if not obj:
+        return False
+    sm = getSecurityManager()
+    for perm in permissions:
+        if not sm.checkPermission(perm, obj):
+            return ''
+    return True
+
+def getFromString(obj, string):
+    attrobj = obj
+    attrs = string.split('.')
+    for attr in attrs:
+        if hasattr(attrobj, attr):
+            attrobj = getattr(attrobj, attr)
+            if isinstance(attrobj, types.MethodType) \
+               and callable(attrobj):
+                attrobj = attrobj()
+        else:
+            attrobj = None
+            break
+    return attrobj if attrobj else None
+
+
+def user_fullname(obj, userid):
+    """
+    Returns the user full name as string.
+    """
+    member = obj.portal_membership.getMemberById(userid)
+    if member is None:
+        return userid
+    member_fullname = member.getProperty('fullname')
+    portal_catalog = getToolByName(obj, 'portal_catalog')
+    c = portal_catalog(portal_type='Contact', getUsername=userid)
+    contact_fullname = c[0].getObject().getFullname() if c else None
+    return contact_fullname or member_fullname or userid
+
+
+def user_email(obj, userid):
+    """
+    This function returns the user email as string.
+    """
+    member = obj.portal_membership.getMemberById(userid)
+    if member is None:
+        return userid
+    member_email = member.getProperty('email')
+    portal_catalog = getToolByName(obj, 'portal_catalog')
+    c = portal_catalog(portal_type='Contact', getUsername=userid)
+    contact_email = c[0].getObject().getEmailAddress() if c else None
+    return contact_email or member_email or ''
+
+
+def measure_time(func_to_measure):
+    """
+    This decorator allows to measure the execution time
+    of a function and prints it to the console.
+    :param func_to_measure: function to be decorated
+    """
+    def wrap(*args, **kwargs):
+        start_time = time()
+        return_value = func_to_measure(*args, **kwargs)
+        finish_time = time()
+        log = "%s took %0.4f seconds. start_time = %0.4f - finish_time = %0.4f\n" % (func_to_measure.func_name,
+                                                                                     finish_time-start_time,
+                                                                                     start_time,
+                                                                                     finish_time)
+        print log
+        return return_value
+    return wrap

@@ -1,7 +1,12 @@
+# This file is part of Bika LIMS
+#
+# Copyright 2011-2016 by it's authors.
+# Some rights reserved. See LICENSE.txt, AUTHORS.txt.
+
 import os
 from setuptools import setup, find_packages
 
-version = '3.2.1'
+version = '3.2.0'
 
 
 def read(*rnames):
@@ -34,7 +39,7 @@ setup(name='bika.lims',
       author_email='support@bikalabs.com',
       maintainer='Naralabs',
       maintainer_email='info@naralabs.com',
-      url='www.bikalims.org',
+      url='http://www.bikalims.org',
       license='AGPL',
       packages=find_packages(exclude=['ez_setup']),
       namespace_packages=['bika'],
@@ -64,6 +69,10 @@ setup(name='bika.lims',
           'plone.app.dexterity',
           'plone.app.relationfield',
           'plone.app.referenceablebehavior',
+          'five.pt',
+          'z3c.jbot',
+          'plone.resource',
+          'CairoSVG==1.0.20',
       ],
       extras_require={
           'test': [

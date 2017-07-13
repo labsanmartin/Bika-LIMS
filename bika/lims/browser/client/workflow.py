@@ -1,3 +1,8 @@
+# This file is part of Bika LIMS
+#
+# Copyright 2011-2016 by it's authors.
+# Some rights reserved. See LICENSE.txt, AUTHORS.txt.
+
 import plone, json
 
 from bika.lims.permissions import *
@@ -38,7 +43,7 @@ class ClientWorkflowAction(AnalysisRequestWorkflowAction):
         # portal_workflow transition url.
         came_from = "workflow_action"
         action = form.get(came_from, '')
-        if not action:
+        if not action and not form.get('bika_listing_filter_bar_submit', ''):
             # workflow_action_button is the action name specified in
             # the bika_listing_view table buttons.
             came_from = "workflow_action_button"

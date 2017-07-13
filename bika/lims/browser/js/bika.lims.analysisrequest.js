@@ -11,9 +11,13 @@ function AnalysisRequestView() {
     that.load = function() {
 
         // fires for all AR workflow transitions fired using the plone contentmenu workflow actions
-        $("a[id^='workflow-transition']").click(transition_with_publication_spec);
-
-    }
+        $("a[id^='workflow-transition']")
+            .not('#workflow-transition-schedule_sampling')
+            .not('#workflow-transition-sample')
+            .click(transition_with_publication_spec);
+        // fires AR workflow transitions when using the schedule samplign transition
+        transition_schedule_sampling();
+    };
 
     function transition_with_publication_spec(event) {
         // Pass the Publication Spec UID (if present) into the WorkflowAction handler
@@ -25,7 +29,83 @@ function AnalysisRequestView() {
         if (element.length > 0) {
             href = href + "&PublicationSpecification=" + $(element).val();
         }
-        window.location.href = href
+        window.location.href = href;
+    }
+    function transition_schedule_sampling(){
+        /* Force the transition to use the "workflow_action" url instead of content_status_modify. workflow_action triggers a class from
+        analysisrequest/workflow/AnalysisRequestWorkflowAction which manage
+        workflow_actions from analysisrequest/sample/samplepartition objects.
+        It is not possible to abort a transition using "workflow_script_*".
+        The recommended way is to set a guard instead.
+
+        The guard expression should be able to look up a view to facilitate more complex guard code, but when a guard returns False the transition isn't even listed as available. It is listed after saving the fields.
+
+        TODO This should be using content_status_modify!  modifying the href
+        is silly.*/
+        var url = $('#workflow-transition-schedule_sampling').attr('href');
+        if (url){
+            var new_url = url.replace("content_status_modify", "workflow_action");
+            $('#workflow-transition-schedule_sampling').attr('href', new_url);
+            // When user clicks on the transition
+            $('#workflow-transition-schedule_sampling').click(function(){
+                var date = $("#SamplingDate").val();
+                var sampler = $("#ScheduledSamplingSampler").val();
+                if (date !== "" && date !== undefined && date !== null &&
+                        sampler !== "" && sampler !== undefined &&
+                        sampler !== null) {
+                    window.location.href = new_url;
+                }
+                else {
+                    var message = "";
+                    if (date === "" || date === undefined || date === null) {
+                        message = message + PMF('${name} is required for this action, please correct.',
+                                                {'name': _("Sampling Date")});
+                    }
+                    if (sampler === "" || sampler === undefined || sampler === null) {
+                        if (message !== "") {
+                            message = message + "<br/>";
+                        }
+                        message = message + PMF(
+                            '${name} is required, please correct.',
+                            {'name': _("'Define the Sampler for the shceduled'")});
+                    }
+                    if ( message !== "") {
+                        window.bika.lims.portalMessage(message);
+                    }
+                }
+            });
+        }
+    }
+
+    function workflow_transition_sample() {
+        $("#workflow-transition-sample").click(function(event){
+            event.preventDefault();
+            var date = $("#DateSampled").val();
+            var sampler = $("#Sampler").val();
+            if (date && sampler) {
+                var form = $("form[name='header_form']");
+                // this 'transition' key is scanned for in header_table.py/__call__
+                form.append("<input type='hidden' name='transition' value='sample'/>")
+                form.submit();
+            }
+            else {
+                var message = "";
+                if (date == "" || date == undefined || date == null) {
+                    message = message + PMF('${name} is required, please correct.',
+                                            {'name': _("Date Sampled")})
+                }
+                if (sampler == "" || sampler == undefined || sampler == null) {
+                    if (message != "") {
+                        message = message + "<br/>";
+                    }
+                    message = message + PMF('${name} is required, please correct.',
+                                            {'name': _("Sampler")})
+                }
+                if ( message != "") {
+                    window.bika.lims.portalMessage(message);
+                }
+            }
+        });
     }
 
 }
@@ -77,9 +157,8 @@ function AnalysisRequestViewView() {
                     }
                 }
             });
-        }
-
-    }
+        };
+    };
 
     function resultsinterpretation_move_below(){
         // By default show only the Results Interpretation for the whole AR, not Dept specific
@@ -154,14 +233,14 @@ function AnalysisRequestViewView() {
          * Set an event for each input field in the AR header. After write something in the input field and
          * focus out it, the event automatically saves the change.
          */
-        $("table.header_table input").not('[attr="referencewidget"').not('[type="hidden"]').each(function(i){
+        $("table.header_table input").not('[attr="referencewidget"').not('[type="hidden"]').not('.rejectionwidget-field').each(function(i){
             // Save input fields
             $(this).change(function () {
                 var pointer = this;
                 build_typical_save_request(pointer);
             });
         });
-        $("table.header_table select").not('[type="hidden"]').each(function(i) {
+        $("table.header_table select").not('[type="hidden"]').not('.rejectionwidget-field').each(function(i) {
             // Save select fields
             $(this).change(function () {
                 var pointer = this;
@@ -243,7 +322,10 @@ function AnalysisRequestViewView() {
          * Given a dict with a fieldname and a fieldvalue, save this data via ajax petition.
          * @requestdata should has the format  {fieldname=fieldvalue} ->  { ReportDryMatter=false}.
          */
-        var url = window.location.href.replace('/base_view', '');
+        var url = window.location.href
+            .replace('/base_view', '')
+            .replace('?check_edit=1', '')
+            .replace('?check_edit=0', '');
         var obj_path = url.replace(window.portal_url, '');
         // Staff for the notification
         var element,name = $.map(requestdata, function(element,index) {return element, index});

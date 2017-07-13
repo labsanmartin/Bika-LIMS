@@ -1,30 +1,27 @@
 import json
-from bika.lims.utils.sample import create_sample
-from bika.lims.utils.samplepartition import create_samplepartition
-from bika.lims.workflow import doActionFor
 import plone
-
+import datetime
+from datetime import date
 from bika.lims import bikaMessageFactory as _
+from bika.lims import deprecated
 from bika.lims import logger
 from bika.lims.browser import BrowserView
 from bika.lims.browser.analysisrequest import AnalysisRequestViewView
-from bika.lims.browser.bika_listing import BikaListingView
 from bika.lims.content.analysisrequest import schema as AnalysisRequestSchema
 from bika.lims.controlpanel.bika_analysisservices import \
     AnalysisServicesView as ASV
-from bika.lims.interfaces import IAnalysisRequestAddView, ISample
-from bika.lims.utils import getHiddenAttributesForClass, dicts_to_dict
+from bika.lims.interfaces import IAnalysisRequestAddView
 from bika.lims.utils import t
-from bika.lims.utils import tmpID
-from bika.lims.utils.analysisrequest import create_analysisrequest
-from magnitude import mg
+from bika.lims.utils.analysisrequest import create_analysisrequest as crar
 from plone.app.layout.globals.interfaces import IViewView
 from Products.Archetypes import PloneMessageFactory as PMF
 from Products.CMFCore.utils import getToolByName
-from Products.CMFPlone.utils import _createObjectByType, safe_unicode
+from Products.CMFPlone.utils import safe_unicode
 from Products.Five.browser.pagetemplatefile import ViewPageTemplateFile
+from bika.lims.catalog import CATALOG_ANALYSIS_REQUEST_LISTING
 from zope.component import getAdapter
 from zope.interface import implements
+import traceback
 
 
 class AnalysisServicesView(ASV):
@@ -147,8 +144,10 @@ class AnalysisServicesView(ASV):
             # The parent folder can be a client or a batch, but we need the
             # client.  It is possible that this will be None!  This happens
             # when the AR is inside a batch, and the batch has no Client set.
-            client = self.context.aq_parent if self.context.aq_parent.portal_type == 'Client'\
-                else self.context.aq_parent.getClient()
+            client = ''
+            if not self.context.aq_parent.portal_type == "AnalysisRequestsFolder":
+                client = self.context.aq_parent if self.context.aq_parent.portal_type == 'Client'\
+                    else self.context.aq_parent.getClient()
             items = super(AnalysisServicesView, self).folderitems()
             for x, item in enumerate(items):
                 if 'obj' not in items[x]:
@@ -221,6 +220,8 @@ class AnalysisRequestAddView(AnalysisRequestViewView):
     def __call__(self):
         self.request.set('disable_border', 1)
         self.ShowPrices = self.context.bika_setup.getShowPrices()
+        self.analysisrequest_catalog =\
+            getToolByName(self.context, CATALOG_ANALYSIS_REQUEST_LISTING)
         if 'ajax_category_expand' in self.request.keys():
             cat = self.request.get('cat')
             asv = AnalysisServicesView(self.context,
@@ -236,19 +237,24 @@ class AnalysisRequestAddView(AnalysisRequestViewView):
         specs = {}
         copy_from = self.request.get('copy_from', "")
         if not copy_from:
-            return {}
-        uids =  copy_from.split(",")
-
+            return json.dumps(specs)
+        uids = copy_from.split(",")
+        proxies = self.analysisrequest_catalog(UID=uids)
+        if not proxies:
+            logger.warning(
+                'No object found for UIDs {0} while copying specs'
+                .format(copy_from))
+            return json.dumps(specs)
         n = 0
-        for uid in uids:
-            proxies = self.bika_catalog(UID=uid)
-            rr = proxies[0].getObject().getResultsRange()
+        for proxie in proxies:
+            res_range = proxie.getObject().getResultsRange()
             new_rr = []
-            for i, r in enumerate(rr):
-                s_uid = self.bika_setup_catalog(portal_type='AnalysisService',
-                                              getKeyword=r['keyword'])[0].UID
-                r['uid'] = s_uid
-                new_rr.append(r)
+            for i, rr in enumerate(res_range):
+                s_uid = self.bika_setup_catalog(
+                    portal_type='AnalysisService',
+                    getKeyword=rr['keyword'])[0].UID
+                rr['uid'] = s_uid
+                new_rr.append(rr)
             specs[n] = new_rr
             n += 1
         return json.dumps(specs)
@@ -274,7 +280,11 @@ class AnalysisRequestAddView(AnalysisRequestViewView):
         for field in schema.fields():
             isVisible = field.widget.isVisible
             v = isVisible(self.context, mode, default='invisible', field=field)
-            if v == visibility:
+            visibility_guard = True
+            # visibility_guard is a widget field defined in the schema in order to know the visibility of the widget when the field is related to a dynamically changing content such as workflows. For instance those fields related to the workflow will be displayed only if the workflow is enabled, otherwise they should not be shown.
+            if 'visibility_guard' in dir(field.widget):
+                visibility_guard = eval(field.widget.visibility_guard)
+            if v == visibility and visibility_guard:
                 fields.append(field)
         return fields
 
@@ -284,7 +294,7 @@ class AnalysisRequestAddView(AnalysisRequestViewView):
         in a new AR.  Used in add_by_row view popup, and add_by_col add view.
 
         :param ar_count: number of AR columns to generate columns for.
-        :return: string: rendered HTML content of bika_listing_table.pt.
+        :returns: string: rendered HTML content of bika_listing_table.pt.
             If no items are found, returns "".
         """
 
@@ -411,6 +421,26 @@ class ajaxAnalysisRequestSubmit():
                     required.remove('SamplingDate')
                 if 'SampleType' in required:
                     required.remove('SampleType')
+            # checking if sampling date is not future
+            if state.get('SamplingDate', ''):
+                samplingdate = state.get('SamplingDate', '')
+                try:
+                    samp_date = datetime.datetime.strptime(
+                        samplingdate, "%Y-%m-%d %H:%M")
+                except ValueError:
+                    print traceback.format_exc()
+                    msg =\
+                        "Bad time formatting: Getting '{}' but expecting an"\
+                        " string with '%Y-%m-%d %H:%M' format."\
+                        .format(samplingdate)
+                    logger.error(msg)
+                    ajax_form_error(self.errors, arnum=arnum, message=msg)
+                    continue
+                now = datetime.datetime.now()
+                if now < samp_date:
+                    msg = t(_("Sampling Date can't be future"))
+                    ajax_form_error(self.errors, arnum=arnum, message=msg)
+                    continue
             # fields flagged as 'hidden' are not considered required because
             # they will already have default values inserted in them
             for fieldname in required:
@@ -441,14 +471,19 @@ class ajaxAnalysisRequestSubmit():
 
         # Now, we will create the specified ARs.
         ARs = []
+        new_ar_uids = []
         for arnum, state in valid_states.items():
             # Create the Analysis Request
-            ar = create_analysisrequest(
+            ar = crar(
                 portal_catalog(UID=state['Client'])[0].getObject(),
                 self.request,
                 state
             )
             ARs.append(ar.Title())
+            # Automatic label printing won't print "register" labels for
+            # Secondary ARs
+            if ar.Title()[-2:] == '01':
+                new_ar_uids.append(ar.UID())
 
         # Display the appropriate message after creation
         if len(ARs) > 1:
@@ -458,183 +493,20 @@ class ajaxAnalysisRequestSubmit():
             message = _('Analysis request ${AR} was successfully created.',
                         mapping={'AR': safe_unicode(ARs[0])})
         self.context.plone_utils.addPortalMessage(message, 'info')
-        # Automatic label printing won't print "register" labels for Secondary. ARs
-        new_ars = [ar for ar in ARs if ar[-2:] == '01']
-        if 'register' in self.context.bika_setup.getAutoPrintStickers() \
-                and new_ars:
+
+        if new_ar_uids and 'register'\
+                in self.context.bika_setup.getAutoPrintStickers():
             return json.dumps({
                 'success': message,
-                'stickers': new_ars,
+                'stickers': new_ar_uids,
                 'stickertemplate': self.context.bika_setup.getAutoStickerTemplate()
             })
         else:
             return json.dumps({'success': message})
 
 
-
+@deprecated(comment="[160525] bika.lims.browser.analysisrequest.add."
+                    "create_analysisrequest is deprecated and will be removed "
+                    "in Bika LIMS 3.3", replacement=crar)
 def create_analysisrequest(context, request, values):
-    """Create an AR.
-
-    :param context the container in which the AR will be created (Client)
-    :param request the request object
-    :param values a dictionary containing fieldname/value pairs, which
-           will be applied.  Some fields will have specific code to handle them,
-           and others will be directly written to the schema.
-    :return the new AR instance
-
-    Special keys present (or required) in the values dict, which are not present
-    in the schema:
-
-        - Partitions: data about partitions to be created, and the
-                      analyses that are to be assigned to each.
-
-        - Prices: custom prices set in the HTML form.
-
-        - ResultsRange: Specification values entered in the HTML form.
-
-    """
-    # Gather neccesary tools
-    workflow = getToolByName(context, 'portal_workflow')
-    bc = getToolByName(context, 'bika_catalog')
-
-    # Create new sample or locate the existing for secondary AR
-    sample = False
-    if values['Sample']:
-        if ISample.providedBy(values['Sample']):
-            secondary = True
-            sample = values['Sample']
-            samplingworkflow_enabled = sample.getSamplingWorkflowEnabled()
-        else:
-            brains = bc(UID=values['Sample'])
-            if brains:
-                secondary = True
-                sample = brains[0].getObject()
-                samplingworkflow_enabled = sample.getSamplingWorkflowEnabled()
-    if not sample:
-        secondary = False
-        sample = create_sample(context, request, values)
-        samplingworkflow_enabled = context.bika_setup.getSamplingWorkflowEnabled()
-
-    # Create the Analysis Request
-    ar = _createObjectByType('AnalysisRequest', context, tmpID())
-    ar.setSample(sample)
-
-    # processform renames the sample, this requires values to contain the Sample.
-    values['Sample'] = sample
-    ar.processForm(REQUEST=request, values=values)
-
-    # Object has been renamed
-    ar.edit(RequestID=ar.getId())
-
-    # Set initial AR state
-    workflow_action = 'sampling_workflow' if samplingworkflow_enabled \
-        else 'no_sampling_workflow'
-    workflow.doActionFor(ar, workflow_action)
-
-
-    # We need to send a list of service UIDS to setAnalyses function.
-    # But we may have received a list of titles, list of UIDS,
-    # list of keywords or list of service objects!
-    service_uids = []
-    for obj in values['Analyses']:
-        uid = False
-        # service objects
-        if hasattr(obj, 'portal_type') and obj.portal_type == 'AnalysisService':
-            uid = obj.UID()
-        # Analysis objects (shortcut for eg copying analyses from other AR)
-        elif hasattr(obj, 'portal_type') and obj.portal_type == 'Analysis':
-            uid = obj.getService()
-        # Maybe already UIDs.
-        if not uid:
-            bsc = getToolByName(context, 'bika_setup_catalog')
-            brains = bsc(portal_type='AnalysisService', UID=obj)
-            if brains:
-                uid = brains[0].UID
-        # Maybe already UIDs.
-        if not uid:
-            bsc = getToolByName(context, 'bika_setup_catalog')
-            brains = bsc(portal_type='AnalysisService', title=obj)
-            if brains:
-                uid = brains[0].UID
-        if uid:
-            service_uids.append(uid)
-        else:
-            logger.info("In analysisrequest.add.create_analysisrequest: cannot "
-                        "find uid of this service: %s" % obj)
-
-    # Set analysis request analyses
-    ar.setAnalyses(service_uids,
-                   prices=values.get("Prices", []),
-                   specs=values.get('ResultsRange', []))
-    analyses = ar.getAnalyses(full_objects=True)
-
-    skip_receive = ['to_be_sampled', 'sample_due', 'sampled', 'to_be_preserved']
-    if secondary:
-        # Only 'sample_due' and 'sample_recieved' samples can be selected
-        # for secondary analyses
-        doActionFor(ar, 'sampled')
-        doActionFor(ar, 'sample_due')
-        sample_state = workflow.getInfoFor(sample, 'review_state')
-        if sample_state not in skip_receive:
-            doActionFor(ar, 'receive')
-
-    for analysis in analyses:
-        doActionFor(analysis, 'sample_due')
-        analysis_state = workflow.getInfoFor(analysis, 'review_state')
-        if analysis_state not in skip_receive:
-            doActionFor(analysis, 'receive')
-
-    if not secondary:
-        # Create sample partitions
-        partitions = []
-        for n, partition in enumerate(values['Partitions']):
-            # Calculate partition id
-            partition_prefix = sample.getId() + "-P"
-            partition_id = '%s%s' % (partition_prefix, n + 1)
-            partition['part_id'] = partition_id
-            # Point to or create sample partition
-            if partition_id in sample.objectIds():
-                partition['object'] = sample[partition_id]
-            else:
-                partition['object'] = create_samplepartition(
-                    sample,
-                    partition
-                )
-            # now assign analyses to this partition.
-            obj = partition['object']
-            for analysis in analyses:
-                if analysis.getService().UID() in partition['services']:
-                    analysis.setSamplePartition(obj)
-
-            partitions.append(partition)
-
-        # If Preservation is required for some partitions,
-        # and the SamplingWorkflow is disabled, we need
-        # to transition to to_be_preserved manually.
-        if not samplingworkflow_enabled:
-            to_be_preserved = []
-            sample_due = []
-            lowest_state = 'sample_due'
-            for p in sample.objectValues('SamplePartition'):
-                if p.getPreservation():
-                    lowest_state = 'to_be_preserved'
-                    to_be_preserved.append(p)
-                else:
-                    sample_due.append(p)
-            for p in to_be_preserved:
-                doActionFor(p, 'to_be_preserved')
-            for p in sample_due:
-                doActionFor(p, 'sample_due')
-            doActionFor(sample, lowest_state)
-            doActionFor(ar, lowest_state)
-
-        # Transition pre-preserved partitions
-        for p in partitions:
-            if 'prepreserved' in p and p['prepreserved']:
-                part = p['object']
-                state = workflow.getInfoFor(part, 'review_state')
-                if state == 'to_be_preserved':
-                    workflow.doActionFor(part, 'preserve')
-
-    # Return the newly created Analysis Request
-    return ar
+    return crar(context, request, values)

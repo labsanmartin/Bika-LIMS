@@ -1,3 +1,8 @@
+# This file is part of Bika LIMS
+#
+# Copyright 2011-2016 by it's authors.
+# Some rights reserved. See LICENSE.txt, AUTHORS.txt.
+
 from AccessControl import ClassSecurityInfo, Unauthorized
 from Products.ATExtensions.Extensions.utils import makeDisplayList
 from Products.ATExtensions.ateapi import RecordField, RecordsField
@@ -123,7 +128,11 @@ class HistoryAwareReferenceField(ReferenceField):
     def get(self, instance, aslist=False, **kwargs):
         """get() returns the list of objects referenced under the relationship.
         """
-        uc = getToolByName(instance, "uid_catalog")
+        try:
+            uc = getToolByName(instance, "uid_catalog")
+        except AttributeError as err:
+            logger.error("AttributeError: {0}".format(err))
+            return []
 
         try:
             res = instance.getRefs(relationship=self.relationship)
@@ -146,15 +155,27 @@ class HistoryAwareReferenceField(ReferenceField):
 
                 version_id = instance.reference_versions[uid]
                 try:
-                    o = pr._retrieve(r,
+                    result = pr._retrieve(r,
                                      selector=version_id,
                                      preserve=(),
-                                     countPurged=True).object
-                except ArchivistRetrieveError:
+                                     countPurged=True)
+                    o = result.object
+                # except ArchivistRetrieveError:
+                #     o = r
+                except:
+                    # TODO Need to investigate
+                    # TypeError: can't pickle instancemethod objects.
+                    # At:
+                    # Products.CMFEditions-2.2.21-py2.7.egg/Products/CMFEditions/CopyModifyMergeRepositoryTool.py", line 494, in _retrieve:    saved = transaction.savepoint()
+                    # https://github.com/plone/Products.CMFEditions/blob/7360a8431c98fdcaecbaaaafd321fd3881a88f9b/Products/CMFEditions/CopyModifyMergeRepositoryTool.py#L494
+                    e = sys.exc_info()
+                    logger.error(
+                        "Caught exception in"
+                        " HistoryAwareReferenceField: %s" % str(e))
                     o = r
+                rd[uid] = o
             else:
-                o = r
-            rd[uid] = o
+                rd[uid] = r
 
         # singlevalued ref fields return only the object, not a list,
         # unless explicitely specified by the aslist option

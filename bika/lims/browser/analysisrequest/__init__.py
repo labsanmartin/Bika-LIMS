@@ -1,3 +1,8 @@
+# This file is part of Bika LIMS
+#
+# Copyright 2011-2016 by it's authors.
+# Some rights reserved. See LICENSE.txt, AUTHORS.txt.
+
 from bika.lims.adapters.referencewidgetvocabulary import DefaultReferenceWidgetVocabulary
 from bika.lims.jsonapi import get_include_fields
 from bika.lims.jsonapi import load_brain_metadata
@@ -120,7 +125,6 @@ class JSONReadExtender(object):
         analyses = self.context.getAnalyses(cancellation_state='active')
         for proxy in analyses:
             analysis = proxy.getObject()
-            service = analysis.getService()
             if proxy.review_state == 'retracted':
                 # these are scraped up when Retested analyses are found below.
                 continue
@@ -128,13 +132,10 @@ class JSONReadExtender(object):
             # These things will be included even if they are not present in
             # include_fields in the request.
             method = analysis.getMethod()
-            if not method:
-                method = service.getMethod()
-            service = analysis.getService()
             analysis_data = {
-                "Uncertainty": service.getUncertainty(analysis.getResult()),
+                "Uncertainty": analysis.getUncertainty(),
                 "Method": method.Title() if method else '',
-                "Unit": service.getUnit(),
+                "Unit": analysis.getUnit(),
             }
             # Place all schema fields ino the result.
             analysis_data.update(load_brain_metadata(proxy, []))
@@ -196,5 +197,3 @@ def mailto_link_from_ccemails(ccemails):
                 address, address)
             ret.append(mailto)
         return ",".join(ret)
-
-

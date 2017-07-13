@@ -1,3 +1,8 @@
+# This file is part of Bika LIMS
+#
+# Copyright 2011-2016 by it's authors.
+# Some rights reserved. See LICENSE.txt, AUTHORS.txt.
+
 """ All permissions are defined here.
     They are also defined in permissions.zcml.
     The two files must be kept in sync.
@@ -12,6 +17,7 @@ from Products.CMFCore.permissions import AddPortalContent
 # Add Permissions:
 # ----------------
 AddAnalysis = 'BIKA: Add Analysis'
+ScheduleSampling = 'BIKA: Schedule Sampling'
 AddAnalysisProfile = 'BIKA: Add AnalysisProfile'
 AddAnalysisRequest = 'BIKA: Add Analysis Request'
 AddAnalysisSpec = 'BIKA: Add AnalysisSpec'
@@ -93,7 +99,6 @@ DisposeSample = 'BIKA: Dispose Sample'
 ImportAnalysis = 'BIKA: Import Analysis'
 Retract = "BIKA: Retract"
 Verify = 'BIKA: Verify'
-VerifyOwnResults = 'BIKA: Verify own results'
 Publish = 'BIKA: Publish'
 EditSample = 'BIKA: Edit Sample'
 EditAR = 'BIKA: Edit AR'
@@ -165,7 +170,3 @@ ReopenSamplingRound = 'BIKA: Reopen SamplingRound'
 # Manage AR Imports
 # ----------------------------------------------
 ManageARImport = 'BIKA: Manage ARImport'
-
-# Manage AR Priorities
-# ----------------------------------------------
-ManageARPriority = 'BIKA: Manage ARPriority'
