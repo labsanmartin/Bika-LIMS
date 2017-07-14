@@ -6,6 +6,7 @@
 from AccessControl import getSecurityManager
 from Products.CMFPlone.utils import safe_unicode
 from bika.lims import bikaMessageFactory as _
+from bika.lims import logger
 from bika.lims.utils import t
 from bika.lims.browser.analyses import AnalysesView
 from bika.lims.config import POINTS_OF_CAPTURE
@@ -80,8 +81,11 @@ class AnalysisRequestManageResultsView(AnalysisRequestViewView):
             will be displayed.
         """
         invalid = []
-        ans = [a.getObject() for a in self.context.getAnalyses()]
+        ans = self.context.getAnalyses(full_objects=True)
         for an in ans:
+            if hasattr(an, 'getObject'):
+                an = an.getObject()
+                
             valid = an.isInstrumentValid()
             if not valid:
                 inv = '%s (%s)' % (safe_unicode(an.Title()), safe_unicode(an.getInstrument().Title()))

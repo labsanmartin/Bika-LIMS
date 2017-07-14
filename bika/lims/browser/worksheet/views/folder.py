@@ -30,6 +30,7 @@ import logging
 import plone
 import json
 import zope
+import logging
 
 
 class FolderView(BikaListingView):
