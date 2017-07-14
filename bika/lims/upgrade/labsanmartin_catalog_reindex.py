@@ -18,7 +18,10 @@ def upgrade(tool):
     logger.info("Running upgrade for Labsanmartin")
 
     # Renames some guard expressions from several transitions
-    worksheet_catalog(portal)
+    # worksheet_catalog(portal)
+    logger.info("Updating role mappings...")
+    wf = get_tool('portal_workflow')
+    wf.updateRoleMappings()
     return True
 
 
