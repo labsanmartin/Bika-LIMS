@@ -4,6 +4,7 @@ import sys
 import traceback
 from Products.CMFCore.utils import getToolByName
 import transaction
+from plone.api.portal import get_tool
 from bika.lims.catalog import CATALOG_WORKSHEET_LISTING
 from bika.lims import logger
 from bika.lims.upgrade.utils import UpgradeUtils
