@@ -8,6 +8,7 @@ from plone.api.portal import get_tool
 from bika.lims.catalog import CATALOG_WORKSHEET_LISTING
 from bika.lims import logger
 from bika.lims.upgrade.utils import UpgradeUtils
+from bika.lims.upgrade.v3_2_0_1706 import fix_ar_analyses_statuses_inconsistences
 
 product = 'bika.lims'
 version = '3.2.0.1707'
@@ -20,9 +21,10 @@ def upgrade(tool):
 
     # Renames some guard expressions from several transitions
     # worksheet_catalog(portal)
-    logger.info("Updating role mappings...")
-    wf = get_tool('portal_workflow')
-    wf.updateRoleMappings()
+    #logger.info("Updating role mappings...")
+    #wf = get_tool('portal_workflow')
+    #wf.updateRoleMappings()
+    fix_ar_analyses_statuses_inconsistences(portal)
     return True
 
 
