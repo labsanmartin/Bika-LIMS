@@ -263,7 +263,7 @@ function AnalysisRequestAddByCol() {
                     template_set(index);
                 });
                 // Writing the sampling date
-                $('input[id^="SamplingDate-"]:visible').val(spec['samplingRoundSamplingDate']);
+                $('input[id^="SamplingDate-"]:visible').val(spec['samplingRoundSamplingDate']+ " 00:00");
                 // Hiding all fields which depends on the sampling round
                 var to_disable = ['Specification', 'SamplePoint', 'ReportDryMatter', 'Sample', 'Batch',
                     'SubGroup', 'SamplingDate', 'Composite', 'Profiles', 'DefaultContainerType', 'AdHoc'];
@@ -1491,6 +1491,9 @@ function AnalysisRequestAddByCol() {
                               if (!element) {
                                   console.log('Selector #' + fieldname + '-' + arnum + ' not present in form')
                                   continue
+                              }
+                              if(element.getAttribute("datetimepicker") && fieldvalue.indexOf(" ")==-1){
+                                fieldvalue = fieldvalue + " 00:00";
                               }
                               // here we go
                               switch (element.type) {
