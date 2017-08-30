@@ -48,6 +48,8 @@ from bika.lims.utils.analysisrequest import notify_rejection
 from bika.lims.workflow import doActionFor
 from bika.lims.workflow import getTransitionDate
 from bika.lims.workflow import getTransitionUsers
+from bika.lims.workflow import isActive
+from bika.lims.workflow import getReviewHistoryActionsList
 from bika.lims.workflow import isBasicTransitionAllowed
 from bika.lims.workflow import isTransitionAllowed
 from bika.lims.workflow import skip
@@ -311,13 +313,6 @@ schema = BikaSchema.copy() + Schema((
             base_query={'review_state': 'open',
                         'cancellation_state': 'active'},
             showOn=True,
-        ),
-    ),
-    ComputedField(
-        'BatchUID',
-        expression='here.getBatch().UID() if here.getBatch() else ""',
-        widget=ComputedWidget(
-            visible=False,
         ),
     ),
     ReferenceField(
@@ -1630,11 +1625,6 @@ schema = BikaSchema.copy() + Schema((
         expression="here.getTemplate().Title() if here.getTemplate() else ''",
         widget=ComputedWidget(visible=False),
     ),
-    ComputedField(
-        'AnalysesNum',
-        expression="here._getAnalysesNum()",
-        widget=ComputedWidget(visible=False),
-    ),
     ReferenceField(
         'ChildAnalysisRequest',
         allowed_types=('AnalysisRequest',),
@@ -1861,6 +1851,7 @@ class AnalysisRequest(BaseFolder):
         client = self.aq_parent
         return client.getProvince()
 
+    @security.public
     def getBatch(self):
         # The parent type may be "Batch" during ar_add.
         # This function fills the hidden field in ar_add.pt
@@ -1868,6 +1859,19 @@ class AnalysisRequest(BaseFolder):
             return self.aq_parent
         else:
             return self.Schema()['Batch'].get(self)
+
+    @security.public
+    def getBatchUID(self):
+        batch = self.getBatch()
+        if batch:
+            return batch.UID()
+
+    @security.public
+    def setBatch(self, value=None):
+        original_value = self.Schema().getField('Batch').get(self)
+        if original_value != value:
+            self.Schema().getField('Batch').set(self, value)
+            self._reindexAnalyses(['getBatchUID'], False)
 
     def getDefaultMemberDiscount(self):
         """ compute default member discount if it applies """
@@ -1879,18 +1883,36 @@ class AnalysisRequest(BaseFolder):
             else:
                 return "0.00"
 
-
-    def _getAnalysesNum(self):
-        """ Return the amount of analyses verified/total in the current AR """
-        verified = 0
+    @security.public
+    def getAnalysesNum(self):
+        """ Returns an array with the number of analyses for the current AR in
+            different statuses, like follows:
+                [verified, total, not_submitted, to_be_verified]
+        """
         total = 0
+        an_nums = [0,0,0,0]
         for analysis in self.getAnalyses():
             review_state = analysis.review_state
-            if review_state in ['verified' ,'published']:
-                verified += 1
-            if review_state not in 'retracted':
-                total += 1
-        return verified,total
+            analysis_object = analysis.getObject()
+            if review_state in ['retracted', 'rejected'] or \
+                    not isActive(analysis_object):
+                # Discard retracted analyses and non-active analyses
+                continue
+
+            actions = getReviewHistoryActionsList(analysis_object)
+            if 'verify' in actions:
+                # Assume the "last" state of analysis is verified
+                index = 0
+
+            elif 'submit' not in actions or review_state != 'to_be_verified':
+                # Assume the "first" state of analysis is results_pending
+                index = 2
+
+            else:
+                index = 3
+            an_nums[index] += 1
+            an_nums[1] += 1
+        return an_nums
 
     @security.public
     def getResponsible(self):
@@ -2985,8 +3007,10 @@ class AnalysisRequest(BaseFolder):
     def setPriority(self, value):
         if not value:
             value = self.Schema().getField('Priority').getDefault(self)
-        self.Schema().getField('Priority').set(self, value)
-        self._reindexAnalyses(['getPrioritySortkey'], True)
+        original_value = self.Schema().getField('Priority').get(self)
+        if original_value != value:
+            self.Schema().getField('Priority').set(self, value)
+            self._reindexAnalyses(['getPrioritySortkey'], True)
 
     @security.private
     def _reindexAnalyses(self, idxs=None, update_metadata=False):
