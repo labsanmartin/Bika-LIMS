@@ -723,6 +723,8 @@ class AnalysisRequestDigester:
             # Prevent any error related with digest
             data = ar.getDigest() if hasattr(ar, 'getDigest') else {}
             if data:
+                # Always set sampling point for labsanmartin
+                data = self._set_sample_point(ar, data)
                 # Check if the department managers have changed since
                 # verification:
                 saved_managers = data.get('managers', {})
@@ -1397,6 +1399,17 @@ class AnalysisRequestDigester:
         for dept in depts:
             ri[dept.Title()] = ar.getResultsInterpretationByDepartment(dept)
         data['resultsinterpretationdepts'] = ri
+        return data
+
+    def _set_sample_point(self, ar, data):
+        """
+        This function updates the 'Sampling point' data.
+        :param ar: an AnalysisRequest object.
+        :param data: The data dictionary.
+        :return: The 'data' dictionary with the updated values.
+        """
+        sample = ar.getSample()
+        data['sample']['sample_point'] = self._sample_point(sample)
         return data
 
     def isHiddenAnalysesVisible(self):
