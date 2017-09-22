@@ -1,0 +1,104 @@
+<!--
+    Default template used to render one barcode big sticker
+
+    To retrieve the item, use view.current_item, that will return an array with
+    the following structure:
+
+    [analysis_request_object, sample_object, sample_partition_object]
+
+    Although sample_object (position 1 in the array) will never be None,
+    analysis_request_object can be None when
+    a) The user requested to render stickers for samples (instead of ARs) or
+    b) The user requested to render stickers for sample partitions or
+    c) The user requested to render stickers for reference samples.
+
+    If c), both analysis_request_object and sample_partition_object will be None
+-->
+
+<metal:block tal:repeat="part view/items">
+
+<tal:sticker define="
+    portal_state      context/@@plone_portal_state;
+    portal_url        portal_state/portal_url;
+    show_partitions   python:context.bika_setup.getShowPartitions();
+    item              view/current_item;
+    ar                python:item[0];
+    ar_id             python:ar.getId() if ar else '';
+    sample            python:item[1];
+    sample_id         python:sample.getId();
+    part              python:item[2];
+    partnr            python:part.getId().split('-')[1];
+    sample            python:part.aq_parent;
+    CSID              python:sample.getClientSampleID();
+    Order             python:sample.getAnalysisRequests()[0].getClientOrderNumber();
+    Hazardous         python:sample.getSampleType().getHazardous();
+    SampleType        python:sample.getSampleType().Title();
+    Sampler           python:sample.getSampler();
+    SampleType        python:sample.getSampleType().Title();
+    SamplePoint       python:sample.getSamplePointTitle();
+    Preservation      python:part.getPreservation() and part.getPreservation().Title() or '';
+    Container         python:part.getContainer() and part.getContainer().Title() or '';
+    SamplingDate      python:sample.getSamplingDate() and sample.getSamplingDate().Date();
+    Deviation         python:sample.getSamplingDeviation() and sample.getSamplingDeviation().Title() or '';
+    DateSampled       python:sample.getDateSampled() and sample.getDateSampled().Date();
+    Composite         python:sample.getComposite();
+    AdHoc             python:sample.getAdHoc();
+    analyses          python:[analysis for analysis in ar.getAnalyses(full_objects=True) if analysis.getSamplePartitionUID() == part.UID()];
+    field_analyses    python:[analysis for analysis in analyses if analysis.getPointOfCapture()=='field'];
+    lab_analyses      python:[analysis for analysis in analyses if analysis.getPointOfCapture()=='lab'];
+    smart_id          python:part.getId() if show_partitions else sample.getId();
+    hazardous         python:sample.getSampleType().getHazardous();">
+<div class="barcode" style="display:none"></div>
+<div tal_content="python:part.getRawAnalyses()"></div>
+<thead>
+	<tal:depts define="depts python:list(set([an.getService().getDepartment().Title() for an in lab_analyses]))">
+	<tal:dept repeat="dept depts">
+
+<table cellpadding="0" cellspacing="0">
+<tr>
+  <td colspan='2' align='center'>Solicitud de Analisis</td>
+</tr>
+<tr>
+  <td colspan='2' align='center' tal:content="dept"></td>
+</tr>
+<!--<tr>
+  <td colspan='2' align='center'>Ver. XX</td>
+</tr>-->
+<tr>
+<th i18n:translate="">Código LSM</th>
+<td tal:content="sample_id"/>
+</tr>
+<tr>
+<th height="30">ID Envase</th>
+<td></td>
+</tr>
+<tr>
+<th height="15" i18n:translate="">Fecha muestreo</th>
+<td tal:content="SamplingDate"/>
+</tr>
+<tr>
+<th height="15" i18n:translate="">Tipo de muestra</th>
+<td colspan='1' tal:content="SampleType"/>
+</tr>
+<tr>
+<th height="15" i18n:translate="">Punto de muestreo</th>
+<td tal:content="SamplePoint"/>
+</tr>
+<tr>
+<td colspan='2' align='center' height="18"><strong>ANALISIS SOLICITADOS</strong></td>
+</tr>
+<tr>
+<td colspan='2'>
+<div tal:repeat="an python:[an for an in lab_analyses if an.getService().getDepartment().Title()==dept]"
+     tal:content="an/Title">
+</div>
+</td>
+</tr>
+</table>
+<p style="page-break-after: always"/>
+</tal:dept>
+</tal:depts>
+</thead>
+</tal:sticker>
+</metal:block>
+
