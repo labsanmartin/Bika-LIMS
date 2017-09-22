@@ -1,0 +1,42 @@
+.sticker {
+    font-family: Helvetica, Arial;
+    font-size:10pt;
+    /* Total width: 76mm + 2x1mm = 78mm */
+    padding:1mm; width: 76mm;
+}
+.sticker .sample-id {
+    height: 5mm;
+    text-align:center;
+}
+table{
+    border-collapse:collapse;
+    margin: 1px 1px 1px 1px;
+    font-size: 10pt;
+    width:100%;
+}
+th {
+    text-align:left;
+    text-transform: none;
+    border-style: solid;
+    border-width: 1pt 0pt 1pt 0pt;
+    padding: 0.5mm;
+}
+td {
+   border: solid;
+   border-width: 1pt 0pt 1pt 0pt;
+   margin: 1px 1px 1px 1px;
+}
+.barcode {
+   margin:0 auto;
+}
+.sticker .analysisrequest-info table,
+.sticker .sampling-date-info table {
+    border-collapse:collapse;
+    margin: 1px 1px 1px 1px;
+    font-size: 6pt;
+    width:100%;
+}
+.sticker .analysisrequest-info table td,
+.sticker .sampling-date-info table td {
+    border:none;
+}
